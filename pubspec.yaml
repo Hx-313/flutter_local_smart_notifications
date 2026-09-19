@@ -4,6 +4,8 @@ description: >-
   persistence, and timezone handling behind one Flutter API.
 version: 0.0.1
 homepage: https://github.com/Hx-313/flutter_local_smart_notifications
+repository: https://github.com/Hx-313/flutter_local_smart_notifications
+issue_tracker: https://github.com/Hx-313/flutter_local_smart_notifications/issues
 
 environment:
   sdk: ^3.11.3
