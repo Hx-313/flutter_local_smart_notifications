@@ -2,6 +2,7 @@
 
 import 'package:flutter/foundation.dart';
 import 'package:flutter_local_notifications/flutter_local_notifications.dart';
+import 'package:flutter_local_smart_notifications/notifications/domain/entities/scheduled_notification.dart';
 import 'package:flutter_timezone/flutter_timezone.dart';
 import 'package:timezone/data/latest.dart' as tz_data;
 import 'package:timezone/timezone.dart' as tz;
@@ -359,6 +360,7 @@ class ReminderNotificationRepositoryImpl
       presentBadge: true,
       presentSound: true,
       sound: hasSound ? soundName : null,
+      interruptionLevel: InterruptionLevel.critical,
     );
 
     return NotificationDetails(android: android, iOS: ios);
