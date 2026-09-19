@@ -6,7 +6,10 @@ plugins {
 
 android {
     namespace = "com.example.notification_lab"
-    compileSdk = flutter.compileSdkVersion
+    // Keep the example reproducible with the SDK level documented by the package.
+    // Flutter's moving default can select an SDK platform that is not installed
+    // locally (for example, android-37 versus the installed android-37.0).
+    compileSdk = 36
     ndkVersion = flutter.ndkVersion
 
     compileOptions {
