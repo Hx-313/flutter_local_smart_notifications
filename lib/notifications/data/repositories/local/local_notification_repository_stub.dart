@@ -1,17 +1,15 @@
-
-import 'dart:async';
-
 import '../../../domain/entities/notification_payload.dart';
 import '../../../domain/entities/notification_result.dart';
-import '../../../domain/entities/routing_event.dart';
 import '../../../domain/failures/notification_failure.dart';
 import '../../../domain/repositories/i_local_notification_repository.dart';
+import '../../routing/routing_event_bus.dart';
 
 class LocalNotificationRepositoryImpl implements ILocalNotificationRepository {
   LocalNotificationRepositoryImpl({
     required dynamic config,
     required dynamic logger,
-    required StreamController<RoutingEvent> routingController,
+    required RoutingEventBus routingEvents,
+    required dynamic plugin,
   });
 
   @override

@@ -3,6 +3,7 @@
 
 import 'notification_payload.dart';
 import 'notification_action.dart';
+import 'scheduled_notification.dart';
 
 class ReminderNotification {
   final NotificationPayload payload;
@@ -11,7 +12,9 @@ class ReminderNotification {
   final bool loopSound;
   final bool persistent;
   final bool fullScreenIntent;
+  final bool exactTiming;
   final List<NotificationAction> actions;
+  final NotificationScheduleSemantics semantics;
 
   const ReminderNotification({
     required this.payload,
@@ -20,7 +23,9 @@ class ReminderNotification {
     this.loopSound = true,
     this.persistent = true,
     this.fullScreenIntent = false,
+    this.exactTiming = false,
     this.actions = const [],
+    this.semantics = NotificationScheduleSemantics.absoluteInstant,
   });
 
   bool get isInstant => scheduledTime == null;
@@ -32,7 +37,9 @@ class ReminderNotification {
     'loopSound': loopSound,
     'persistent': persistent,
     'fullScreenIntent': fullScreenIntent,
+    'exactTiming': exactTiming,
     'actions': actions.map((a) => a.toMap()).toList(),
+    'semantics': semantics.name,
   };
 
   factory ReminderNotification.fromMap(Map<String, dynamic> map) =>
@@ -47,6 +54,7 @@ class ReminderNotification {
         loopSound: map['loopSound'] as bool? ?? true,
         persistent: map['persistent'] as bool? ?? true,
         fullScreenIntent: map['fullScreenIntent'] as bool? ?? false,
+        exactTiming: map['exactTiming'] as bool? ?? false,
         actions:
             (map['actions'] as List?)
                 ?.map(
@@ -54,5 +62,9 @@ class ReminderNotification {
                 )
                 .toList() ??
             [],
+        semantics: NotificationScheduleSemantics.values.firstWhere(
+          (value) => value.name == map['semantics'],
+          orElse: () => NotificationScheduleSemantics.absoluteInstant,
+        ),
       );
 }

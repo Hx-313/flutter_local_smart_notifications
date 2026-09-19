@@ -1,4 +1,3 @@
-
 import 'notification_action.dart';
 
 class NotificationPayload {

@@ -1,4 +1,3 @@
-
 // ignore_for_file: override_on_non_overriding_member
 
 import 'dart:convert';
@@ -6,59 +5,23 @@ import 'package:shared_preferences/shared_preferences.dart';
 
 import '../../domain/entities/notification_result.dart';
 import '../../domain/entities/reminder_notification.dart';
+import '../../domain/entities/routing_event.dart';
 import '../../domain/failures/notification_failure.dart';
 import '../../domain/repositories/i_notification_storage.dart';
 
-
 class NotificationStorageImpl implements INotificationStorage {
-  static const _fcmTokenKey = 'ns_fcm_token';
   static const _remindersKey = 'ns_reminders';
   static const _permissionAskedKey = 'ns_permission_asked';
   static const _denialCountKey = 'ns_denial_count';
+  static const _permissionDialogAtKey = 'ns_permission_dialog_at';
+  static const _pendingRoutingEventsKey = 'ns_pending_routing_events';
+  static const _lastKnownTimezoneKey = 'ns_last_known_timezone';
 
   SharedPreferences? _prefs;
 
   Future<SharedPreferences> get _preferences async {
     _prefs ??= await SharedPreferences.getInstance();
     return _prefs!;
-  }
-
-  @override
-  Future<NotificationResult<void>> saveFcmToken(String token) async {
-    try {
-      final prefs = await _preferences;
-      await prefs.setString(_fcmTokenKey, token);
-      return const NotificationSuccess(null);
-    } catch (e, s) {
-      return NotificationFailureResult(
-        StorageWriteFailure('Failed to save FCM token', e, s),
-      );
-    }
-  }
-
-  @override
-  Future<NotificationResult<String?>> getFcmToken() async {
-    try {
-      final prefs = await _preferences;
-      return NotificationSuccess(prefs.getString(_fcmTokenKey));
-    } catch (e, s) {
-      return NotificationFailureResult(
-        StorageReadFailure('Failed to read FCM token', e, s),
-      );
-    }
-  }
-
-  @override
-  Future<NotificationResult<void>> clearFcmToken() async {
-    try {
-      final prefs = await _preferences;
-      await prefs.remove(_fcmTokenKey);
-      return const NotificationSuccess(null);
-    } catch (e, s) {
-      return NotificationFailureResult(
-        StorageWriteFailure('Failed to clear FCM token', e, s),
-      );
-    }
   }
 
   @override
@@ -176,6 +139,19 @@ class NotificationStorageImpl implements INotificationStorage {
   }
 
   @override
+  Future<NotificationResult<void>> resetDenialCount() async {
+    try {
+      final prefs = await _preferences;
+      await prefs.remove(_denialCountKey);
+      return const NotificationSuccess(null);
+    } catch (e, s) {
+      return NotificationFailureResult(
+        StorageWriteFailure('Failed to reset denial count', e, s),
+      );
+    }
+  }
+
+  @override
   Future<NotificationResult<int>> getDenialCount() async {
     try {
       final prefs = await _preferences;
@@ -183,6 +159,107 @@ class NotificationStorageImpl implements INotificationStorage {
     } catch (e, s) {
       return NotificationFailureResult(
         StorageReadFailure('Failed to read denial count', e, s),
+      );
+    }
+  }
+
+  @override
+  Future<NotificationResult<bool>> shouldShowPermissionDialog({
+    required Duration cooldown,
+  }) async {
+    try {
+      final prefs = await _preferences;
+      final lastShown = prefs.getInt(_permissionDialogAtKey);
+      if (lastShown == null) return const NotificationSuccess(true);
+      final elapsed = DateTime.now().difference(
+        DateTime.fromMillisecondsSinceEpoch(lastShown),
+      );
+      return NotificationSuccess(elapsed >= cooldown);
+    } catch (e, s) {
+      return NotificationFailureResult(
+        StorageReadFailure('Failed to read permission dialog cooldown', e, s),
+      );
+    }
+  }
+
+  @override
+  Future<NotificationResult<void>> recordPermissionPromptShown() async {
+    try {
+      final prefs = await _preferences;
+      await prefs.setInt(
+        _permissionDialogAtKey,
+        DateTime.now().millisecondsSinceEpoch,
+      );
+      return const NotificationSuccess(null);
+    } catch (e, s) {
+      return NotificationFailureResult(
+        StorageWriteFailure('Failed to save permission dialog time', e, s),
+      );
+    }
+  }
+
+  @override
+  Future<NotificationResult<void>> savePendingRoutingEvent(
+    RoutingEvent event,
+  ) async {
+    try {
+      final prefs = await _preferences;
+      final events = prefs.getStringList(_pendingRoutingEventsKey) ?? [];
+      events.add(jsonEncode(event.toMap()));
+      await prefs.setStringList(_pendingRoutingEventsKey, events);
+      return const NotificationSuccess(null);
+    } catch (e, s) {
+      return NotificationFailureResult(
+        StorageWriteFailure('Failed to save pending routing event', e, s),
+      );
+    }
+  }
+
+  @override
+  Future<NotificationResult<List<RoutingEvent>>>
+  consumePendingRoutingEvents() async {
+    try {
+      final prefs = await _preferences;
+      final encoded = prefs.getStringList(_pendingRoutingEventsKey) ?? [];
+      final events = encoded
+          .map(
+            (item) => RoutingEvent.fromMap(
+              Map<String, dynamic>.from(jsonDecode(item) as Map),
+            ),
+          )
+          .toList();
+      await prefs.remove(_pendingRoutingEventsKey);
+      return NotificationSuccess(events);
+    } catch (e, s) {
+      return NotificationFailureResult(
+        StorageReadFailure('Failed to restore pending routing events', e, s),
+      );
+    }
+  }
+
+  @override
+  Future<NotificationResult<String?>> getLastKnownTimezone() async {
+    try {
+      final prefs = await _preferences;
+      return NotificationSuccess(prefs.getString(_lastKnownTimezoneKey));
+    } catch (e, s) {
+      return NotificationFailureResult(
+        StorageReadFailure('Failed to read last known timezone', e, s),
+      );
+    }
+  }
+
+  @override
+  Future<NotificationResult<void>> saveLastKnownTimezone(
+    String timezone,
+  ) async {
+    try {
+      final prefs = await _preferences;
+      await prefs.setString(_lastKnownTimezoneKey, timezone);
+      return const NotificationSuccess(null);
+    } catch (e, s) {
+      return NotificationFailureResult(
+        StorageWriteFailure('Failed to save last known timezone', e, s),
       );
     }
   }

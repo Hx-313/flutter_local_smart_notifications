@@ -1,6 +1,3 @@
-
-import 'dart:async';
-
 import '../../../domain/entities/notification_result.dart';
 import '../../../domain/entities/reminder_notification.dart';
 import '../../../domain/failures/notification_failure.dart';
@@ -12,7 +9,8 @@ class ReminderNotificationRepositoryImpl
     required dynamic config,
     required dynamic storage,
     required dynamic logger,
-    required StreamController routingController,
+    required dynamic plugin,
+    required dynamic permissions,
   });
 
   @override

@@ -1,61 +1,37 @@
 // lib/services/notifications/domain/entities/permission_status.dart
 // DOMAIN | Sealed permission status types
 
-sealed class PermissionStatus {
-  const PermissionStatus();
+sealed class NotificationPermissionStatus {
+  const NotificationPermissionStatus();
 
-  bool get isGranted => this is PermissionGranted;
+  bool get isGranted =>
+      this is PermissionGranted || this is PermissionProvisional;
   bool get isDenied =>
       this is PermissionDenied || this is PermissionPermanentlyDenied;
   bool get canRequest =>
       this is PermissionNotDetermined || this is PermissionDenied;
 }
 
-class PermissionNotDetermined extends PermissionStatus {
+class PermissionNotDetermined extends NotificationPermissionStatus {
   const PermissionNotDetermined();
 }
 
-class PermissionGranted extends PermissionStatus {
+class PermissionGranted extends NotificationPermissionStatus {
   const PermissionGranted();
 }
 
-class PermissionDenied extends PermissionStatus {
+class PermissionDenied extends NotificationPermissionStatus {
   const PermissionDenied();
 }
 
-class PermissionPermanentlyDenied extends PermissionStatus {
+class PermissionPermanentlyDenied extends NotificationPermissionStatus {
   const PermissionPermanentlyDenied();
 }
 
-class PermissionRestricted extends PermissionStatus {
+class PermissionRestricted extends NotificationPermissionStatus {
   const PermissionRestricted();
 }
 
-class PermissionProvisional extends PermissionStatus {
+class PermissionProvisional extends NotificationPermissionStatus {
   const PermissionProvisional();
-}
-
-class NotificationPermissionState {
-  final bool canShowNotifications; // POST_NOTIFICATIONS / iOS general
-  final bool canScheduleExact; // SCHEDULE_EXACT_ALARM (Android 12+)
-  final bool needsExactAlarmSetting; // Must open system settings (Android 12+)
-  final bool isPermanentlyDenied; // User said "don't ask again"
-
-  const NotificationPermissionState({
-    required this.canShowNotifications,
-    required this.canScheduleExact,
-    required this.needsExactAlarmSetting,
-    required this.isPermanentlyDenied,
-  });
-
-  /// Fully ready — no banners needed
-  bool get isFullyGranted => canShowNotifications && canScheduleExact;
-
-  /// Needs runtime prompt (Android 13+ or iOS)
-  bool get needsNotificationPrompt =>
-      !canShowNotifications && !isPermanentlyDenied;
-
-  /// Needs settings redirect (permanently denied or exact alarm)
-  bool get needsSettingsRedirect =>
-      isPermanentlyDenied || needsExactAlarmSetting;
 }

@@ -1,4 +1,3 @@
-
 import '../../../domain/entities/notification_result.dart';
 import '../../../domain/entities/permission_status.dart';
 import '../../../domain/failures/notification_failure.dart';
@@ -13,14 +12,14 @@ class PermissionRepositoryImpl implements IPermissionRepository {
   });
 
   @override
-  Future<NotificationResult<PermissionStatus>> check() async {
+  Future<NotificationResult<NotificationPermissionStatus>> check() async {
     return const NotificationFailureResult(
       ProviderNotEnabledFailure('permission'),
     );
   }
 
   @override
-  Future<NotificationResult<PermissionStatus>> request() async {
+  Future<NotificationResult<NotificationPermissionStatus>> request() async {
     return const NotificationFailureResult(
       ProviderNotEnabledFailure('permission'),
     );

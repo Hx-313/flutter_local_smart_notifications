@@ -1,11 +1,13 @@
 name: flutter_local_smart_notifications
-description: "A new Flutter package project."
+description: >-
+  Local, scheduled, exact, and reminder notifications with permission,
+  persistence, and timezone handling behind one Flutter API.
 version: 0.0.1
-homepage:
+homepage: https://github.com/Hx-313/flutter_local_smart_notifications
 
 environment:
   sdk: ^3.11.3
-  flutter: ">=1.17.0"
+  flutter: ">=3.38.1"
 
 dependencies:
   app_settings: ^9.0.0
@@ -16,6 +18,7 @@ dependencies:
   flutter_timezone: ^5.1.0
   permission_handler: ^13.0.2
   shared_preferences: ^2.5.5
+  timezone: ^0.11.1
 
 dev_dependencies:
   flutter_test:

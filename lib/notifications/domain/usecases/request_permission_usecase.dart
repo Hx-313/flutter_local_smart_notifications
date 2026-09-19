@@ -4,22 +4,12 @@
 import '../entities/permission_status.dart';
 import '../entities/notification_result.dart';
 import '../repositories/i_permission_repository.dart';
-import '../repositories/i_notification_storage.dart';
 
 class RequestPermissionUseCase {
   final IPermissionRepository _repository;
-  final INotificationStorage _storage;
 
-  const RequestPermissionUseCase(this._repository, this._storage);
+  const RequestPermissionUseCase(this._repository);
 
-  Future<NotificationResult<PermissionStatus>> call() async {
-    await _storage.savePermissionAsked(true);
-    final result = await _repository.request();
-
-    if (result.isSuccess && !result.valueOrNull!.isGranted) {
-      await _storage.incrementDenialCount();
-    }
-
-    return result;
-  }
+  Future<NotificationResult<NotificationPermissionStatus>> call() =>
+      _repository.request();
 }

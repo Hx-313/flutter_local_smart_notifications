@@ -1,8 +1,10 @@
-
 import 'dart:io';
 
 import 'package:app_settings/app_settings.dart';
+import 'package:device_info_plus/device_info_plus.dart';
 import 'package:flutter_local_notifications/flutter_local_notifications.dart';
+import 'package:permission_handler/permission_handler.dart'
+    as permission_handler;
 
 import '../../../core/config/notification_config.dart';
 import '../../../domain/entities/notification_result.dart';
@@ -13,138 +15,76 @@ import '../../../domain/repositories/i_notification_storage.dart';
 import '../../../domain/repositories/i_permission_repository.dart';
 
 class PermissionRepositoryImpl implements IPermissionRepository {
-  final FlutterLocalNotificationsPlugin _plugin;
-  final NotificationConfig _config;
-  final INotificationLogger _logger;
-  final INotificationStorage _storage;
-
   PermissionRepositoryImpl({
     required FlutterLocalNotificationsPlugin plugin,
     required NotificationConfig config,
     required INotificationLogger logger,
     required INotificationStorage storage,
+    DeviceInfoPlugin? deviceInfo,
   }) : _plugin = plugin,
        _config = config,
        _logger = logger,
-       _storage = storage;
+       _storage = storage,
+       _deviceInfo = deviceInfo ?? DeviceInfoPlugin();
+
+  final FlutterLocalNotificationsPlugin _plugin;
+  final NotificationConfig _config;
+  final INotificationLogger _logger;
+  final INotificationStorage _storage;
+  final DeviceInfoPlugin _deviceInfo;
 
   @override
-  Future<NotificationResult<PermissionStatus>> check() async {
+  Future<NotificationResult<NotificationPermissionStatus>> check() async {
     try {
-      final askedResult = await _storage.hasPermissionBeenAsked();
-      final denialCountResult = await _storage.getDenialCount();
-
-      final asked = askedResult.isSuccess ? askedResult.valueOrNull! : false;
-      final denialCount = denialCountResult.isSuccess
-          ? denialCountResult.valueOrNull!
-          : 0;
-
+      NotificationResult<NotificationPermissionStatus> result;
       if (Platform.isAndroid) {
-        final android = _plugin
-            .resolvePlatformSpecificImplementation<
-              AndroidFlutterLocalNotificationsPlugin
-            >();
-
-        final enabled = await android?.areNotificationsEnabled() ?? false;
-
-        if (enabled) return const NotificationSuccess(PermissionGranted());
-        if (!asked) return const NotificationSuccess(PermissionNotDetermined());
-
-        // Approximation: after multiple denials, treat as permanently denied.
-        if (denialCount >= 2) {
-          return const NotificationSuccess(PermissionPermanentlyDenied());
-        }
-        return const NotificationSuccess(PermissionDenied());
+        result = await _checkAndroid();
+      } else if (Platform.isIOS || Platform.isMacOS) {
+        result = await _checkApplePlatform();
+      } else {
+        result = const NotificationSuccess(PermissionGranted());
       }
-
-      if (Platform.isIOS) {
-        // iOS: no reliable "pure check" in flutter_local_notifications.
-        // We use persisted asked/denialCount to return correct UX states.
-        if (!asked) return const NotificationSuccess(PermissionNotDetermined());
-
-        final ios = _plugin
-            .resolvePlatformSpecificImplementation<
-              IOSFlutterLocalNotificationsPlugin
-            >();
-
-        // Best-effort probe: requestPermissions with all false should not prompt.
-        final granted =
-            await ios?.requestPermissions(
-              alert: false,
-              badge: false,
-              sound: false,
-              provisional: false,
-              critical: false,
-            ) ??
-            false;
-
-        if (granted) return const NotificationSuccess(PermissionGranted());
-
-        if (denialCount >= 2) {
-          return const NotificationSuccess(PermissionPermanentlyDenied());
-        }
-        return const NotificationSuccess(PermissionDenied());
-      }
-
-      return const NotificationSuccess(PermissionGranted());
-    } catch (e, s) {
-      _logger.error('Permission check failed', e, s);
+      if (result.isFailure) return result;
+      return _applyPersistedDenialState(result.valueOrNull!);
+    } catch (error, stackTrace) {
+      _logger.error('Permission check failed', error, stackTrace);
       return NotificationFailureResult(
-        UnknownFailure('Permission check failed', e, s),
+        UnknownFailure('Permission check failed', error, stackTrace),
       );
     }
   }
 
   @override
-  Future<NotificationResult<PermissionStatus>> request() async {
+  Future<NotificationResult<NotificationPermissionStatus>> request() async {
     try {
-      await _storage.savePermissionAsked(true);
+      final saved = await _storage.savePermissionAsked(true);
+      if (saved.isFailure) {
+        return NotificationFailureResult(saved.failureOrNull!);
+      }
+      final recorded = await _storage.recordPermissionPromptShown();
+      if (recorded.isFailure) {
+        return NotificationFailureResult(recorded.failureOrNull!);
+      }
 
-      bool granted = false;
-
+      NotificationPermissionStatus status;
       if (Platform.isAndroid) {
-        final android = _plugin
-            .resolvePlatformSpecificImplementation<
-              AndroidFlutterLocalNotificationsPlugin
-            >();
-        granted = await android?.requestNotificationsPermission() ?? false;
-      } else if (Platform.isIOS) {
-        final ios = _plugin
-            .resolvePlatformSpecificImplementation<
-              IOSFlutterLocalNotificationsPlugin
-            >();
-
-        granted =
-            await ios?.requestPermissions(
-              alert: _config.permissionConfig.requestAlert,
-              badge: _config.permissionConfig.requestBadge,
-              sound: _config.permissionConfig.requestSound,
-              provisional: _config.permissionConfig.requestProvisional,
-              critical: _config.permissionConfig.requestCriticalAlert,
-            ) ??
-            false;
+        status = await _requestAndroid();
+      } else if (Platform.isIOS || Platform.isMacOS) {
+        status = await _requestApplePlatform();
       } else {
-        granted = true;
+        status = const PermissionGranted();
       }
 
-      if (!granted) {
-        await _storage.incrementDenialCount();
-        final denialCountResult = await _storage.getDenialCount();
-        final denialCount = denialCountResult.isSuccess
-            ? denialCountResult.valueOrNull!
-            : 0;
-
-        if (denialCount >= 2) {
-          return const NotificationSuccess(PermissionPermanentlyDenied());
-        }
-        return const NotificationSuccess(PermissionDenied());
+      if (!status.isGranted) return _recordDenial(status);
+      final reset = await _storage.resetDenialCount();
+      if (reset.isFailure) {
+        return NotificationFailureResult(reset.failureOrNull!);
       }
-
-      return const NotificationSuccess(PermissionGranted());
-    } catch (e, s) {
-      _logger.error('Permission request failed', e, s);
+      return NotificationSuccess(status);
+    } catch (error, stackTrace) {
+      _logger.error('Permission request failed', error, stackTrace);
       return NotificationFailureResult(
-        UnknownFailure('Permission request failed', e, s),
+        UnknownFailure('Permission request failed', error, stackTrace),
       );
     }
   }
@@ -154,10 +94,10 @@ class PermissionRepositoryImpl implements IPermissionRepository {
     try {
       await AppSettings.openAppSettings(type: AppSettingsType.notification);
       return const NotificationSuccess(null);
-    } catch (e, s) {
-      _logger.error('Open settings failed', e, s);
+    } catch (error, stackTrace) {
+      _logger.error('Open notification settings failed', error, stackTrace);
       return NotificationFailureResult(
-        UnknownFailure('Open settings failed', e, s),
+        UnknownFailure('Open notification settings failed', error, stackTrace),
       );
     }
   }
@@ -165,18 +105,24 @@ class PermissionRepositoryImpl implements IPermissionRepository {
   @override
   Future<NotificationResult<bool>> canScheduleExactAlarms() async {
     try {
-      if (!Platform.isAndroid) return const NotificationSuccess(true);
+      if (!Platform.isAndroid || await _androidSdkVersion() < 31) {
+        return const NotificationSuccess(true);
+      }
 
       final android = _plugin
           .resolvePlatformSpecificImplementation<
             AndroidFlutterLocalNotificationsPlugin
           >();
-      final can = await android?.canScheduleExactNotifications() ?? false;
-      return NotificationSuccess(can);
-    } catch (e, s) {
-      _logger.error('canScheduleExactAlarms failed', e, s);
+      final allowed = await android?.canScheduleExactNotifications() ?? false;
+      return NotificationSuccess(allowed);
+    } catch (error, stackTrace) {
+      _logger.error('Exact alarm permission check failed', error, stackTrace);
       return NotificationFailureResult(
-        UnknownFailure('canScheduleExactAlarms failed', e, s),
+        UnknownFailure(
+          'Exact alarm permission check failed',
+          error,
+          stackTrace,
+        ),
       );
     }
   }
@@ -184,17 +130,188 @@ class PermissionRepositoryImpl implements IPermissionRepository {
   @override
   Future<NotificationResult<bool>> requestExactAlarmPermission() async {
     try {
-      if (!Platform.isAndroid) return const NotificationSuccess(true);
+      if (!Platform.isAndroid || await _androidSdkVersion() < 31) {
+        return const NotificationSuccess(true);
+      }
 
       final android = _plugin
           .resolvePlatformSpecificImplementation<
             AndroidFlutterLocalNotificationsPlugin
           >();
-      final granted = await android?.requestExactAlarmsPermission() ?? false;
-      return NotificationSuccess(granted);
-    } catch (e, s) {
-      _logger.error('requestExactAlarmPermission failed', e, s);
+      final request = android?.requestExactAlarmsPermission();
+      final allowed =
+          await request?.timeout(
+            _config.permissionConfig.settingsReturnTimeout,
+            onTimeout: () => false,
+          ) ??
+          false;
+      return NotificationSuccess(allowed);
+    } catch (error, stackTrace) {
+      _logger.error('Exact alarm permission request failed', error, stackTrace);
       return const NotificationFailureResult(ExactAlarmPermissionFailure());
     }
+  }
+
+  Future<NotificationResult<NotificationPermissionStatus>>
+  _checkAndroid() async {
+    final sdk = await _androidSdkVersion();
+    final android = _plugin
+        .resolvePlatformSpecificImplementation<
+          AndroidFlutterLocalNotificationsPlugin
+        >();
+    final notificationsEnabled =
+        await android?.areNotificationsEnabled() ?? false;
+
+    if (sdk < 33) {
+      return NotificationSuccess(
+        notificationsEnabled
+            ? const PermissionGranted()
+            : const PermissionPermanentlyDenied(),
+      );
+    }
+
+    final askedResult = await _storage.hasPermissionBeenAsked();
+    if (askedResult.isFailure) {
+      return NotificationFailureResult(askedResult.failureOrNull!);
+    }
+
+    final platformStatus =
+        await permission_handler.Permission.notification.status;
+    if (notificationsEnabled && platformStatus.isGranted) {
+      return const NotificationSuccess(PermissionGranted());
+    }
+    if (!askedResult.valueOrNull! && platformStatus.isDenied) {
+      return const NotificationSuccess(PermissionNotDetermined());
+    }
+    return NotificationSuccess(_mapStatus(platformStatus));
+  }
+
+  Future<NotificationResult<NotificationPermissionStatus>>
+  _checkApplePlatform() async {
+    final askedResult = await _storage.hasPermissionBeenAsked();
+    if (askedResult.isFailure) {
+      return NotificationFailureResult(askedResult.failureOrNull!);
+    }
+
+    final platformStatus =
+        await permission_handler.Permission.notification.status;
+    if (!askedResult.valueOrNull! && platformStatus.isDenied) {
+      return const NotificationSuccess(PermissionNotDetermined());
+    }
+    return NotificationSuccess(_mapStatus(platformStatus));
+  }
+
+  Future<NotificationPermissionStatus> _requestAndroid() async {
+    if (await _androidSdkVersion() < 33) {
+      final result = await _checkAndroid();
+      return result.valueOrNull ?? const PermissionPermanentlyDenied();
+    }
+
+    final status = await permission_handler.Permission.notification.request();
+    return _mapStatus(status);
+  }
+
+  Future<NotificationPermissionStatus> _requestApplePlatform() async {
+    bool granted;
+    if (Platform.isIOS) {
+      final ios = _plugin
+          .resolvePlatformSpecificImplementation<
+            IOSFlutterLocalNotificationsPlugin
+          >();
+      granted =
+          await ios?.requestPermissions(
+            alert: _config.permissionConfig.requestAlert,
+            badge: _config.permissionConfig.requestBadge,
+            sound: _config.permissionConfig.requestSound,
+            provisional: _config.permissionConfig.requestProvisional,
+            critical: _config.permissionConfig.requestCriticalAlert,
+          ) ??
+          false;
+    } else {
+      final macos = _plugin
+          .resolvePlatformSpecificImplementation<
+            MacOSFlutterLocalNotificationsPlugin
+          >();
+      granted =
+          await macos?.requestPermissions(
+            alert: _config.permissionConfig.requestAlert,
+            badge: _config.permissionConfig.requestBadge,
+            sound: _config.permissionConfig.requestSound,
+            critical: _config.permissionConfig.requestCriticalAlert,
+          ) ??
+          false;
+    }
+
+    final status = await permission_handler.Permission.notification.status;
+    if (granted && status.isDenied) return const PermissionGranted();
+    return _mapStatus(status);
+  }
+
+  Future<NotificationResult<NotificationPermissionStatus>> _recordDenial(
+    NotificationPermissionStatus status,
+  ) async {
+    final incremented = await _storage.incrementDenialCount();
+    if (incremented.isFailure) {
+      return NotificationFailureResult(incremented.failureOrNull!);
+    }
+
+    if (status is PermissionPermanentlyDenied ||
+        status is PermissionRestricted) {
+      return NotificationSuccess(status);
+    }
+
+    final countResult = await _storage.getDenialCount();
+    if (countResult.isFailure) {
+      return NotificationFailureResult(countResult.failureOrNull!);
+    }
+    if (countResult.valueOrNull! >=
+        _config.permissionConfig.denialsBeforeSettings) {
+      return const NotificationSuccess(PermissionPermanentlyDenied());
+    }
+    return NotificationSuccess(status);
+  }
+
+  Future<NotificationResult<NotificationPermissionStatus>>
+  _applyPersistedDenialState(NotificationPermissionStatus status) async {
+    if (status.isGranted) {
+      final reset = await _storage.resetDenialCount();
+      if (reset.isFailure) {
+        return NotificationFailureResult(reset.failureOrNull!);
+      }
+      return NotificationSuccess(status);
+    }
+    if (status is PermissionPermanentlyDenied ||
+        status is PermissionRestricted) {
+      return NotificationSuccess(status);
+    }
+
+    final countResult = await _storage.getDenialCount();
+    if (countResult.isFailure) {
+      return NotificationFailureResult(countResult.failureOrNull!);
+    }
+    if (countResult.valueOrNull! >=
+        _config.permissionConfig.denialsBeforeSettings) {
+      return const NotificationSuccess(PermissionPermanentlyDenied());
+    }
+    return NotificationSuccess(status);
+  }
+
+  NotificationPermissionStatus _mapStatus(
+    permission_handler.PermissionStatus status,
+  ) {
+    if (status.isGranted || status.isLimited) {
+      return const PermissionGranted();
+    }
+    if (status.isProvisional) return const PermissionProvisional();
+    if (status.isPermanentlyDenied) {
+      return const PermissionPermanentlyDenied();
+    }
+    if (status.isRestricted) return const PermissionRestricted();
+    return const PermissionDenied();
+  }
+
+  Future<int> _androidSdkVersion() async {
+    final info = await _deviceInfo.androidInfo;
+    return info.version.sdkInt;
   }
 }

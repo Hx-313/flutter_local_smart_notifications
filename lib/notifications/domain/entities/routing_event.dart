@@ -1,7 +1,7 @@
 // lib/services/notifications/domain/entities/routing_event.dart
 // DOMAIN | Event emitted when notification tapped for navigation
 
-enum NotificationSource { local, scheduled, reminder, fcm, oneSignal }
+enum NotificationSource { local, scheduled, reminder }
 
 enum NotificationInteraction { tap, action, dismiss, timeout }
 
@@ -34,5 +34,30 @@ class RoutingEvent {
     source: source,
     interaction: interaction,
     timestamp: DateTime.now(),
+  );
+
+  Map<String, dynamic> toMap() => {
+    'target': target,
+    'actionId': actionId,
+    'data': data,
+    'source': source.name,
+    'interaction': interaction.name,
+    'timestamp': timestamp.toIso8601String(),
+  };
+
+  factory RoutingEvent.fromMap(Map<String, dynamic> map) => RoutingEvent(
+    target: map['target'] as String? ?? 'home',
+    actionId: map['actionId'] as String?,
+    data: Map<String, dynamic>.from(map['data'] as Map? ?? const {}),
+    source: NotificationSource.values.firstWhere(
+      (value) => value.name == map['source'],
+      orElse: () => NotificationSource.local,
+    ),
+    interaction: NotificationInteraction.values.firstWhere(
+      (value) => value.name == map['interaction'],
+      orElse: () => NotificationInteraction.tap,
+    ),
+    timestamp:
+        DateTime.tryParse(map['timestamp'] as String? ?? '') ?? DateTime.now(),
   );
 }

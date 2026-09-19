@@ -35,17 +35,20 @@ class ScheduleReminderUseCase {
     }
 
     final allReminders = await _storage.getAllReminders();
-    if (allReminders.isSuccess &&
-        allReminders.valueOrNull!.length >= _maxActive) {
+    if (allReminders.isFailure) {
+      return NotificationFailureResult(allReminders.failureOrNull!);
+    }
+
+    final reminders = allReminders.valueOrNull!;
+    final replacesExisting = reminders.any(
+      (existing) => existing.payload.id == reminder.payload.id,
+    );
+    if (!replacesExisting && reminders.length >= _maxActive) {
       return NotificationFailureResult(
         ReminderLimitExceededFailure(_maxActive),
       );
     }
 
-    final result = await _repository.schedule(reminder);
-    if (result.isSuccess) {
-      await _storage.saveReminder(reminder);
-    }
-    return result;
+    return _repository.schedule(reminder);
   }
 }

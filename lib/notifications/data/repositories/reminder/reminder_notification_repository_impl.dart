@@ -1,11 +1,9 @@
-
 // ignore_for_file: unused_field
 
-import 'dart:async';
-import 'dart:convert';
-import 'dart:typed_data';
-
+import 'package:flutter/foundation.dart';
 import 'package:flutter_local_notifications/flutter_local_notifications.dart';
+import 'package:flutter_timezone/flutter_timezone.dart';
+import 'package:timezone/data/latest.dart' as tz_data;
 import 'package:timezone/timezone.dart' as tz;
 
 import '../../../core/config/notification_channel_config.dart';
@@ -16,31 +14,70 @@ import '../../../domain/entities/routing_event.dart';
 import '../../../domain/failures/notification_failure.dart';
 import '../../../domain/repositories/i_notification_logger.dart';
 import '../../../domain/repositories/i_notification_storage.dart';
+import '../../../domain/repositories/i_permission_repository.dart';
 import '../../../domain/repositories/i_reminder_notification_repository.dart';
+import '../../routing/notification_response_codec.dart';
 
 class ReminderNotificationRepositoryImpl
     implements IReminderNotificationRepository {
-  final FlutterLocalNotificationsPlugin _plugin =
-      FlutterLocalNotificationsPlugin();
+  final FlutterLocalNotificationsPlugin _plugin;
   final NotificationConfig _config;
   final INotificationStorage _storage;
   final INotificationLogger _logger;
-  final StreamController<RoutingEvent> _routingController;
+  final IPermissionRepository _permissions;
 
   ReminderNotificationRepositoryImpl({
     required NotificationConfig config,
     required INotificationStorage storage,
     required INotificationLogger logger,
-    required StreamController<RoutingEvent> routingController,
-  }) : _config = config,
+    required FlutterLocalNotificationsPlugin plugin,
+    required IPermissionRepository permissions,
+  }) : _plugin = plugin,
+       _config = config,
        _storage = storage,
        _logger = logger,
-       _routingController = routingController;
+       _permissions = permissions;
 
   @override
   Future<NotificationResult<void>> initialize() async {
-    _logger.info('Reminder repository initialized');
-    return const NotificationSuccess(null);
+    try {
+      tz_data.initializeTimeZones();
+      final timezone = await FlutterTimezone.getLocalTimezone();
+      tz.setLocalLocation(tz.getLocation(timezone.identifier));
+
+      final previousTimezone = await _storage.getLastKnownTimezone();
+      if (previousTimezone.isFailure) {
+        return NotificationFailureResult(previousTimezone.failureOrNull!);
+      }
+      final savedTimezone = await _storage.saveLastKnownTimezone(
+        timezone.identifier,
+      );
+      if (savedTimezone.isFailure) return savedTimezone;
+
+      final changed =
+          previousTimezone.valueOrNull != null &&
+          previousTimezone.valueOrNull != timezone.identifier;
+      if (changed) {
+        final rescheduled = await _reschedulePersisted(wallClockOnly: true);
+        if (rescheduled.isFailure) return rescheduled;
+      }
+
+      _logger.info('Reminder repository initialized: ${timezone.identifier}');
+      return const NotificationSuccess(null);
+    } catch (error, stackTrace) {
+      _logger.error(
+        'Failed to initialize reminder timezone',
+        error,
+        stackTrace,
+      );
+      return NotificationFailureResult(
+        ProviderInitializationFailure(
+          'Reminder timezone initialization failed',
+          error,
+          stackTrace,
+        ),
+      );
+    }
   }
 
   @override
@@ -62,11 +99,15 @@ class ReminderNotificationRepositoryImpl
         title: reminder.payload.title,
         body: reminder.payload.body,
         notificationDetails: details,
-        payload: jsonEncode(reminder.payload.data),
+        payload: encodeNotificationResponsePayload(
+          data: reminder.payload.data,
+          source: NotificationSource.reminder,
+        ),
       );
 
       if (reminder.persistent) {
-        await _storage.saveReminder(reminder);
+        final saved = await _storage.saveReminder(reminder);
+        if (saved.isFailure) return saved;
       }
 
       return const NotificationSuccess(null);
@@ -94,8 +135,50 @@ class ReminderNotificationRepositoryImpl
         return showInstant(reminder);
       }
 
-      final scheduledTz = tz.TZDateTime.from(reminder.scheduledTime!, tz.local);
+      final scheduledTz = _toTimezone(
+        reminder.scheduledTime!,
+        reminder.semantics,
+      );
       final details = _buildReminderDetails(reminder, channel);
+
+      final exactTiming =
+          reminder.exactTiming || _config.reminderConfig.useExactAlarm;
+      if (exactTiming) {
+        final exactAlarm = await _permissions.canScheduleExactAlarms();
+        if (exactAlarm.isFailure) {
+          return NotificationFailureResult(exactAlarm.failureOrNull!);
+        }
+        if (!exactAlarm.valueOrNull!) {
+          return const NotificationFailureResult(ExactAlarmPermissionFailure());
+        }
+      }
+
+      final pending = await _plugin.pendingNotificationRequests();
+      final platformName = defaultTargetPlatform.name;
+      final platformLimit = defaultTargetPlatform == TargetPlatform.iOS
+          ? 64 - _config.reminderConfig.iosReservedSlots
+          : _config.reminderConfig.maxPendingNotifications;
+      final effectiveLimit =
+          platformLimit < _config.reminderConfig.maxPendingNotifications
+          ? platformLimit
+          : _config.reminderConfig.maxPendingNotifications;
+      final currentCount =
+          pending.length -
+          (pending.any((item) => item.id == reminder.payload.id) ? 1 : 0);
+      if (currentCount >= effectiveLimit) {
+        return NotificationFailureResult(
+          PlatformLimitExceededFailure(
+            platform: platformName,
+            effectiveCap: effectiveLimit,
+            currentCount: currentCount,
+            requestedCount: 1,
+            remainingCapacity: (effectiveLimit - currentCount).clamp(
+              0,
+              effectiveLimit,
+            ),
+          ),
+        );
+      }
 
       await _plugin.zonedSchedule(
         id: reminder.payload.id,
@@ -103,12 +186,18 @@ class ReminderNotificationRepositoryImpl
         body: reminder.payload.body,
         scheduledDate: scheduledTz,
         notificationDetails: details,
-        androidScheduleMode: AndroidScheduleMode.exactAllowWhileIdle,
+        androidScheduleMode: exactTiming
+            ? AndroidScheduleMode.exactAllowWhileIdle
+            : AndroidScheduleMode.inexactAllowWhileIdle,
 
-        payload: jsonEncode(reminder.payload.data),
+        payload: encodeNotificationResponsePayload(
+          data: reminder.payload.data,
+          source: NotificationSource.reminder,
+        ),
       );
 
-      await _storage.saveReminder(reminder);
+      final saved = await _storage.saveReminder(reminder);
+      if (saved.isFailure) return saved;
       return const NotificationSuccess(null);
     } catch (e, s) {
       _logger.error('Schedule reminder failed', e, s);
@@ -118,11 +207,32 @@ class ReminderNotificationRepositoryImpl
     }
   }
 
+  tz.TZDateTime _toTimezone(
+    DateTime value,
+    NotificationScheduleSemantics semantics,
+  ) {
+    if (semantics == NotificationScheduleSemantics.absoluteInstant) {
+      return tz.TZDateTime.from(value, tz.local);
+    }
+    return tz.TZDateTime(
+      tz.local,
+      value.year,
+      value.month,
+      value.day,
+      value.hour,
+      value.minute,
+      value.second,
+      value.millisecond,
+      value.microsecond,
+    );
+  }
+
   @override
   Future<NotificationResult<void>> cancel(int id) async {
     try {
       await _plugin.cancel(id: id);
-      await _storage.removeReminder(id);
+      final removed = await _storage.removeReminder(id);
+      if (removed.isFailure) return removed;
       return const NotificationSuccess(null);
     } catch (e, s) {
       return NotificationFailureResult(
@@ -135,12 +245,14 @@ class ReminderNotificationRepositoryImpl
   Future<NotificationResult<void>> cancelAll() async {
     try {
       final reminders = await _storage.getAllReminders();
-      if (reminders.isSuccess) {
-        for (final r in reminders.valueOrNull!) {
-          await _plugin.cancel(id: r.payload.id);
-        }
+      if (reminders.isFailure) {
+        return NotificationFailureResult(reminders.failureOrNull!);
       }
-      await _storage.clearAllReminders();
+      for (final r in reminders.valueOrNull!) {
+        await _plugin.cancel(id: r.payload.id);
+      }
+      final cleared = await _storage.clearAllReminders();
+      if (cleared.isFailure) return cleared;
       return const NotificationSuccess(null);
     } catch (e, s) {
       return NotificationFailureResult(
@@ -150,7 +262,12 @@ class ReminderNotificationRepositoryImpl
   }
 
   @override
-  Future<NotificationResult<void>> rescheduleAllPersisted() async {
+  Future<NotificationResult<void>> rescheduleAllPersisted() =>
+      _reschedulePersisted();
+
+  Future<NotificationResult<void>> _reschedulePersisted({
+    bool wallClockOnly = false,
+  }) async {
     try {
       final result = await _storage.getAllReminders();
       if (result.isFailure) {
@@ -159,13 +276,28 @@ class ReminderNotificationRepositoryImpl
         );
       }
 
-      final now = DateTime.now();
       for (final reminder in result.valueOrNull!) {
+        if (wallClockOnly &&
+            reminder.semantics !=
+                NotificationScheduleSemantics.localWallClock) {
+          continue;
+        }
+
         final dt = reminder.scheduledTime;
-        if (dt != null && dt.isAfter(now)) {
-          await schedule(reminder);
+        final isFuture =
+            dt != null &&
+            (reminder.semantics == NotificationScheduleSemantics.localWallClock
+                ? _toTimezone(
+                    dt,
+                    reminder.semantics,
+                  ).isAfter(tz.TZDateTime.now(tz.local))
+                : dt.isAfter(DateTime.now()));
+        if (isFuture) {
+          final scheduled = await schedule(reminder);
+          if (scheduled.isFailure) return scheduled;
         } else {
-          await _storage.removeReminder(reminder.payload.id);
+          final removed = await _storage.removeReminder(reminder.payload.id);
+          if (removed.isFailure) return removed;
         }
       }
 
@@ -227,7 +359,6 @@ class ReminderNotificationRepositoryImpl
       presentBadge: true,
       presentSound: true,
       sound: hasSound ? soundName : null,
-      interruptionLevel: InterruptionLevel.critical,
     );
 
     return NotificationDetails(android: android, iOS: ios);

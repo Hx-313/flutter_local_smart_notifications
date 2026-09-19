@@ -29,3 +29,19 @@ migrate_working_dir/
 .flutter-plugins-dependencies
 /build/
 /coverage/
+
+# Local AI-agent state and personal instructions. Keep durable project guidance
+# in the tracked AGENTS.md file instead.
+/.agents/
+/.codex/
+/.claude/
+/.cursor/
+/.continue/
+/.roo/
+/.aider*
+/.cursorrules
+/AGENT.md
+/CLAUDE.md
+/CODEX.md
+/GEMINI.md
+/COPILOT.md

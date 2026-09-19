@@ -10,5 +10,6 @@ class CheckPermissionUseCase {
 
   const CheckPermissionUseCase(this._repository);
 
-  Future<NotificationResult<PermissionStatus>> call() => _repository.check();
+  Future<NotificationResult<NotificationPermissionStatus>> call() =>
+      _repository.check();
 }

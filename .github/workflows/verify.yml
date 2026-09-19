@@ -1,0 +1,25 @@
+name: Verify package
+
+on:
+  pull_request:
+  push:
+    branches: [master]
+
+jobs:
+  verify:
+    runs-on: ubuntu-latest
+    steps:
+      - uses: actions/checkout@v4
+      - uses: subosito/flutter-action@v2
+        with:
+          flutter-version: '3.38.1'
+          channel: stable
+      - run: flutter pub get
+      - name: Reject cloud push SDKs in the local package
+        run: |
+          if flutter pub deps | grep -E '(^| )(firebase_|onesignal_)'; then
+            echo 'Firebase and OneSignal must remain outside this local-only package.'
+            exit 1
+          fi
+      - run: flutter analyze
+      - run: flutter test

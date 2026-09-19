@@ -1,5 +1,3 @@
-
-
 class PermissionConfig {
   final bool autoRequestOnInit;
   final String dialogTitle;
@@ -11,6 +9,9 @@ class PermissionConfig {
   final bool requestSound;
   final bool requestBadge;
   final bool requestAlert;
+  final Duration dialogCooldown;
+  final int denialsBeforeSettings;
+  final Duration settingsReturnTimeout;
 
   const PermissionConfig({
     this.autoRequestOnInit = false,
@@ -24,5 +25,8 @@ class PermissionConfig {
     this.requestSound = true,
     this.requestBadge = true,
     this.requestAlert = true,
+    this.dialogCooldown = const Duration(days: 7),
+    this.denialsBeforeSettings = 2,
+    this.settingsReturnTimeout = const Duration(minutes: 2),
   });
 }

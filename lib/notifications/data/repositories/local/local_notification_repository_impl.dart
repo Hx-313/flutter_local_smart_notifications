@@ -1,7 +1,5 @@
-
-import 'dart:async';
-import 'dart:convert';
 import 'dart:typed_data';
+import 'dart:ui';
 
 import 'package:flutter_local_notifications/flutter_local_notifications.dart';
 
@@ -13,21 +11,25 @@ import '../../../domain/entities/routing_event.dart';
 import '../../../domain/failures/notification_failure.dart';
 import '../../../domain/repositories/i_local_notification_repository.dart';
 import '../../../domain/repositories/i_notification_logger.dart';
+import '../../routing/notification_response_codec.dart';
+import '../../routing/routing_event_bus.dart';
+import '../../storage/notification_storage_impl.dart';
 
 class LocalNotificationRepositoryImpl implements ILocalNotificationRepository {
-  final FlutterLocalNotificationsPlugin _plugin =
-      FlutterLocalNotificationsPlugin();
+  final FlutterLocalNotificationsPlugin _plugin;
   final NotificationConfig _config;
   final INotificationLogger _logger;
-  final StreamController<RoutingEvent> _routingController;
+  final RoutingEventBus _routingEvents;
 
   LocalNotificationRepositoryImpl({
     required NotificationConfig config,
     required INotificationLogger logger,
-    required StreamController<RoutingEvent> routingController,
-  }) : _config = config,
+    required RoutingEventBus routingEvents,
+    required FlutterLocalNotificationsPlugin plugin,
+  }) : _plugin = plugin,
+       _config = config,
        _logger = logger,
-       _routingController = routingController;
+       _routingEvents = routingEvents;
 
   @override
   Future<NotificationResult<void>> initialize() async {
@@ -47,10 +49,15 @@ class LocalNotificationRepositoryImpl implements ILocalNotificationRepository {
           iOS: iosSettings,
         ),
         onDidReceiveNotificationResponse: _onResponse,
-        onDidReceiveBackgroundNotificationResponse: _backgroundHandler,
+        onDidReceiveBackgroundNotificationResponse: notificationTapBackground,
       );
 
       await _createChannels();
+      final launchDetails = await _plugin.getNotificationAppLaunchDetails();
+      if (launchDetails?.didNotificationLaunchApp ?? false) {
+        final response = launchDetails?.notificationResponse;
+        if (response != null) _onResponse(response);
+      }
       _logger.info('LocalNotificationRepository initialized');
       return const NotificationSuccess(null);
     } catch (e, s) {
@@ -62,15 +69,13 @@ class LocalNotificationRepositoryImpl implements ILocalNotificationRepository {
   }
 
   void _onResponse(NotificationResponse response) {
-    final payload = response.payload;
-    if (payload == null || payload.isEmpty) return;
-
     try {
-      final data = jsonDecode(payload) as Map<String, dynamic>;
-      _routingController.add(
+      final decoded = decodeNotificationResponsePayload(response.payload);
+      if (decoded == null) return;
+      _routingEvents.add(
         RoutingEvent.fromPayloadData(
-          data: data,
-          source: NotificationSource.local,
+          data: decoded.data,
+          source: decoded.source,
           interaction:
               response.notificationResponseType ==
                   NotificationResponseType.selectedNotificationAction
@@ -82,11 +87,6 @@ class LocalNotificationRepositoryImpl implements ILocalNotificationRepository {
     } catch (_) {
       // ignore malformed payload
     }
-  }
-
-  @pragma('vm:entry-point')
-  static void _backgroundHandler(NotificationResponse response) {
-    // Background isolate entrypoint (must be top-level / static).
   }
 
   Future<void> _createChannels() async {
@@ -179,7 +179,10 @@ class LocalNotificationRepositoryImpl implements ILocalNotificationRepository {
         title: payload.title,
         body: payload.body,
         notificationDetails: NotificationDetails(android: android, iOS: ios),
-        payload: jsonEncode(payload.data),
+        payload: encodeNotificationResponsePayload(
+          data: payload.data,
+          source: NotificationSource.local,
+        ),
       );
 
       return const NotificationSuccess(null);
@@ -219,5 +222,28 @@ class LocalNotificationRepositoryImpl implements ILocalNotificationRepository {
         UnknownFailure('CancelAll failed', e, s),
       );
     }
+  }
+}
+
+@pragma('vm:entry-point')
+void notificationTapBackground(NotificationResponse response) async {
+  try {
+    DartPluginRegistrant.ensureInitialized();
+    final decoded = decodeNotificationResponsePayload(response.payload);
+    if (decoded == null) return;
+
+    final event = RoutingEvent.fromPayloadData(
+      data: decoded.data,
+      source: decoded.source,
+      interaction:
+          response.notificationResponseType ==
+              NotificationResponseType.selectedNotificationAction
+          ? NotificationInteraction.action
+          : NotificationInteraction.tap,
+      actionId: response.actionId,
+    );
+    await NotificationStorageImpl().savePendingRoutingEvent(event);
+  } catch (_) {
+    // A background callback cannot report through the in-memory runtime.
   }
 }

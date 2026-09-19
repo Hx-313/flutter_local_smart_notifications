@@ -1,8 +1,6 @@
 // ignore_for_file: unused_field
 
-import 'dart:async';
-import 'dart:typed_data';
-
+import 'package:flutter/foundation.dart';
 import 'package:flutter_local_notifications/flutter_local_notifications.dart'
     hide RepeatInterval;
 import 'package:flutter_timezone/flutter_timezone.dart';
@@ -16,25 +14,28 @@ import '../../../domain/entities/routing_event.dart';
 import '../../../domain/entities/scheduled_notification.dart';
 import '../../../domain/failures/notification_failure.dart';
 import '../../../domain/repositories/i_notification_logger.dart';
+import '../../../domain/repositories/i_permission_repository.dart';
 import '../../../domain/repositories/i_scheduled_notification_repository.dart';
+import '../../routing/notification_response_codec.dart';
 
 class ScheduledNotificationRepositoryImpl
     implements IScheduledNotificationRepository {
-  final FlutterLocalNotificationsPlugin _plugin =
-      FlutterLocalNotificationsPlugin();
+  final FlutterLocalNotificationsPlugin _plugin;
   final NotificationConfig _config;
   final INotificationLogger _logger;
-  final StreamController<RoutingEvent> _routingController;
+  final IPermissionRepository _permissions;
 
   bool _timezoneInitialized = false;
 
   ScheduledNotificationRepositoryImpl({
     required NotificationConfig config,
     required INotificationLogger logger,
-    required StreamController<RoutingEvent> routingController,
-  }) : _config = config,
+    required FlutterLocalNotificationsPlugin plugin,
+    required IPermissionRepository permissions,
+  }) : _plugin = plugin,
+       _config = config,
        _logger = logger,
-       _routingController = routingController;
+       _permissions = permissions;
 
   @override
   Future<NotificationResult<void>> initialize() async {
@@ -72,16 +73,57 @@ class ScheduledNotificationRepositoryImpl
         );
       }
 
-      final scheduledTz = tz.TZDateTime.from(
+      if (notification.exactTiming) {
+        final exactAlarm = await _permissions.canScheduleExactAlarms();
+        if (exactAlarm.isFailure) {
+          return NotificationFailureResult(exactAlarm.failureOrNull!);
+        }
+        if (!exactAlarm.valueOrNull!) {
+          return const NotificationFailureResult(ExactAlarmPermissionFailure());
+        }
+      }
+
+      final pending = await _plugin.pendingNotificationRequests();
+      final platformName = defaultTargetPlatform.name;
+      final platformLimit = defaultTargetPlatform == TargetPlatform.iOS
+          ? 64 - _config.reminderConfig.iosReservedSlots
+          : _config.reminderConfig.maxPendingNotifications;
+      final effectiveLimit =
+          platformLimit < _config.reminderConfig.maxPendingNotifications
+          ? platformLimit
+          : _config.reminderConfig.maxPendingNotifications;
+      final currentCount =
+          pending.length -
+          (pending.any((item) => item.id == notification.payload.id) ? 1 : 0);
+      if (currentCount >= effectiveLimit) {
+        return NotificationFailureResult(
+          PlatformLimitExceededFailure(
+            platform: platformName,
+            effectiveCap: effectiveLimit,
+            currentCount: currentCount,
+            requestedCount: 1,
+            remainingCapacity: (effectiveLimit - currentCount).clamp(
+              0,
+              effectiveLimit,
+            ),
+          ),
+        );
+      }
+
+      final scheduledTz = _toTimezone(
         notification.scheduledTime,
-        tz.local,
+        notification.semantics,
       );
       final details = _buildNotificationDetails(notification, channel);
 
       final matchComponents = _mapRepeatInterval(notification.repeatInterval);
       final androidMode = notification.exactTiming
-          ? AndroidScheduleMode.exactAllowWhileIdle
-          : AndroidScheduleMode.inexactAllowWhileIdle;
+          ? notification.allowWhileIdle
+                ? AndroidScheduleMode.exactAllowWhileIdle
+                : AndroidScheduleMode.exact
+          : notification.allowWhileIdle
+          ? AndroidScheduleMode.inexactAllowWhileIdle
+          : AndroidScheduleMode.inexact;
 
       await _plugin.zonedSchedule(
         id: notification.payload.id,
@@ -92,7 +134,10 @@ class ScheduledNotificationRepositoryImpl
         androidScheduleMode: androidMode,
 
         matchDateTimeComponents: matchComponents,
-        payload: _encodePayload(notification.payload.data),
+        payload: encodeNotificationResponsePayload(
+          data: notification.payload.data,
+          source: NotificationSource.scheduled,
+        ),
       );
 
       _logger.info(
@@ -105,6 +150,26 @@ class ScheduledNotificationRepositoryImpl
         SchedulingFailure('Schedule failed', e, s),
       );
     }
+  }
+
+  tz.TZDateTime _toTimezone(
+    DateTime value,
+    NotificationScheduleSemantics semantics,
+  ) {
+    if (semantics == NotificationScheduleSemantics.absoluteInstant) {
+      return tz.TZDateTime.from(value, tz.local);
+    }
+    return tz.TZDateTime(
+      tz.local,
+      value.year,
+      value.month,
+      value.day,
+      value.hour,
+      value.minute,
+      value.second,
+      value.millisecond,
+      value.microsecond,
+    );
   }
 
   @override
@@ -196,10 +261,4 @@ class ScheduledNotificationRepositoryImpl
         ChannelImportance.high => Importance.high,
         ChannelImportance.max => Importance.max,
       };
-
-  String _encodePayload(Map<String, dynamic> data) {
-    final buffer = StringBuffer();
-    data.forEach((k, v) => buffer.write('$k=$v;'));
-    return buffer.toString();
-  }
 }
