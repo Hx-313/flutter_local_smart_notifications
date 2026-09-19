@@ -45,7 +45,7 @@ class PermissionRepositoryImpl implements IPermissionRepository {
         result = const NotificationSuccess(PermissionGranted());
       }
       if (result.isFailure) return result;
-      return _applyPersistedDenialState(result.valueOrNull!);
+      return await _applyPersistedDenialState(result.valueOrNull!);
     } catch (error, stackTrace) {
       _logger.error('Permission check failed', error, stackTrace);
       return NotificationFailureResult(
@@ -75,7 +75,7 @@ class PermissionRepositoryImpl implements IPermissionRepository {
         status = const PermissionGranted();
       }
 
-      if (!status.isGranted) return _recordDenial(status);
+      if (!status.isGranted) return await _recordDenial(status);
       final reset = await _storage.resetDenialCount();
       if (reset.isFailure) {
         return NotificationFailureResult(reset.failureOrNull!);

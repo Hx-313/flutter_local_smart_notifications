@@ -106,7 +106,7 @@ flutter pub get
 
 Native setup is **required** before testing on a device. This package intentionally does not modify your Android manifest, Gradle files, iOS Podfile, or iOS project settings, because every app has different product requirements.
 
-See [docs/SETUP.md](docs/SETUP.md) for:
+See [doc/SETUP.md](doc/SETUP.md) for:
 
 - Android permissions and receivers
 - Exact-alarm access and Google Play policy considerations
@@ -311,7 +311,7 @@ await NotificationService.instance.showNotification(payload);
 
 - `cancelNotification` controls whether the notification is removed after the action.
 - `openApp` controls whether the action opens the app, where the platform supports that choice.
-- Android action taps require the action receiver described in [docs/SETUP.md](docs/SETUP.md).
+- Android action taps require the action receiver described in [doc/SETUP.md](doc/SETUP.md).
 
 ### Schedule a notification
 
@@ -509,7 +509,7 @@ final message = result.fold(
 | `ReminderLimitExceededFailure` | Cancel reminders or increase `maxActiveReminders`. |
 | `UnsupportedPlatformFailure` | Run the operation on a supported platform. |
 
-See the complete list in [docs/API.md](docs/API.md).
+See the complete list in [doc/API.md](doc/API.md).
 
 ## Permissions
 
@@ -573,7 +573,7 @@ Before shipping a notification feature:
 
 ## Documentation
 
-- [Public API reference](docs/API.md)
-- [Consumer native setup](docs/SETUP.md)
-- [Architecture and lifecycle model](docs/ARCHITECTURE.md)
+- [Public API reference](doc/API.md)
+- [Consumer native setup](doc/SETUP.md)
+- [Architecture and lifecycle model](doc/ARCHITECTURE.md)
 - [Runnable example app](example/README.md)

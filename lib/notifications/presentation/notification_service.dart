@@ -170,6 +170,7 @@ class NotificationService with WidgetsBindingObserver {
     BuildContext? context,
     bool includeExactAlarm = false,
   }) async {
+    final requestContext = context;
     final failure = _precondition<NotificationPermissionStatus>();
     if (failure != null) return failure;
     if (!_hasAnyLocalFeature) {
@@ -179,30 +180,36 @@ class NotificationService with WidgetsBindingObserver {
     }
 
     var statusResult = await checkPermission();
-    if (_contextWasUnmounted(context)) return _cancelledPermissionRequest();
+    if (requestContext != null && !requestContext.mounted) {
+      return _cancelledPermissionRequest();
+    }
     if (statusResult.isFailure) return statusResult;
 
     var status = statusResult.valueOrNull!;
     if (!status.isGranted && status.canRequest) {
       final shouldRequest = await _shouldRequestNatively(status);
-      if (_contextWasUnmounted(context)) return _cancelledPermissionRequest();
+      if (requestContext != null && !requestContext.mounted) {
+        return _cancelledPermissionRequest();
+      }
       if (shouldRequest.isFailure) {
         return NotificationFailureResult(shouldRequest.failureOrNull!);
       }
       if (shouldRequest.valueOrNull!) {
         statusResult = await _factory!.requestPermissionUseCase.call();
-        if (_contextWasUnmounted(context)) return _cancelledPermissionRequest();
+        if (requestContext != null && !requestContext.mounted) {
+          return _cancelledPermissionRequest();
+        }
         if (statusResult.isFailure) return statusResult;
         status = statusResult.valueOrNull!;
         _publishPermissionStatus(status);
       }
     }
 
-    if (!status.isGranted && !status.canRequest && context != null) {
+    if (!status.isGranted && !status.canRequest && requestContext != null) {
       final shouldShow = await _factory!.storage.shouldShowPermissionDialog(
         cooldown: _config!.permissionConfig.dialogCooldown,
       );
-      if (_contextWasUnmounted(context)) return _cancelledPermissionRequest();
+      if (!requestContext.mounted) return _cancelledPermissionRequest();
       if (shouldShow.isFailure) {
         return NotificationFailureResult(shouldShow.failureOrNull!);
       }
@@ -211,34 +218,34 @@ class NotificationService with WidgetsBindingObserver {
         final dialog =
             _config!.permissionDialog ?? const DefaultPermissionDialog();
         final openSettings = await dialog.show(
-          context: context,
+          context: requestContext,
           title: _config!.permissionConfig.dialogTitle,
           message: _config!.permissionConfig.dialogMessage,
           openSettingsLabel: _config!.permissionConfig.openSettingsLabel,
           notNowLabel: _config!.permissionConfig.notNowLabel,
         );
-        if (_contextWasUnmounted(context)) return _cancelledPermissionRequest();
+        if (!requestContext.mounted) return _cancelledPermissionRequest();
 
         final dismissed = await _factory!.storage.recordPermissionPromptShown();
-        if (_contextWasUnmounted(context)) return _cancelledPermissionRequest();
+        if (!requestContext.mounted) return _cancelledPermissionRequest();
         if (dismissed.isFailure) {
           return NotificationFailureResult(dismissed.failureOrNull!);
         }
 
         if (openSettings) {
           final opened = await openNotificationSettings();
-          if (_contextWasUnmounted(context)) {
+          if (!requestContext.mounted) {
             return _cancelledPermissionRequest();
           }
           if (opened.isFailure) {
             return NotificationFailureResult(opened.failureOrNull!);
           }
           await _waitForResume(_config!.permissionConfig.settingsReturnTimeout);
-          if (_contextWasUnmounted(context)) {
+          if (!requestContext.mounted) {
             return _cancelledPermissionRequest();
           }
           statusResult = await checkPermission();
-          if (_contextWasUnmounted(context)) {
+          if (!requestContext.mounted) {
             return _cancelledPermissionRequest();
           }
           if (statusResult.isFailure) return statusResult;
@@ -251,20 +258,26 @@ class NotificationService with WidgetsBindingObserver {
 
     if (includeExactAlarm) {
       final exact = await _factory!.permissionRepo.canScheduleExactAlarms();
-      if (_contextWasUnmounted(context)) return _cancelledPermissionRequest();
+      if (requestContext != null && !requestContext.mounted) {
+        return _cancelledPermissionRequest();
+      }
       if (exact.isFailure) {
         return NotificationFailureResult(exact.failureOrNull!);
       }
       if (!exact.valueOrNull!) {
         final request = await _factory!.permissionRepo
             .requestExactAlarmPermission();
-        if (_contextWasUnmounted(context)) return _cancelledPermissionRequest();
+        if (requestContext != null && !requestContext.mounted) {
+          return _cancelledPermissionRequest();
+        }
         if (request.isFailure || request.valueOrNull != true) {
           return const NotificationFailureResult(ExactAlarmPermissionFailure());
         }
         final confirmed = await _factory!.permissionRepo
             .canScheduleExactAlarms();
-        if (_contextWasUnmounted(context)) return _cancelledPermissionRequest();
+        if (requestContext != null && !requestContext.mounted) {
+          return _cancelledPermissionRequest();
+        }
         if (confirmed.isFailure || confirmed.valueOrNull != true) {
           return const NotificationFailureResult(ExactAlarmPermissionFailure());
         }
@@ -394,9 +407,6 @@ class NotificationService with WidgetsBindingObserver {
     }
     return null;
   }
-
-  bool _contextWasUnmounted(BuildContext? context) =>
-      context != null && !context.mounted;
 
   NotificationFailureResult<NotificationPermissionStatus>
   _cancelledPermissionRequest() =>

@@ -1,0 +1,10 @@
+# Repository-only agent instructions.
+AGENTS.md
+
+# Generated Flutter and Android build output.
+**/build/**
+**/.dart_tool/**
+**/.gradle/**
+
+# Machine-specific consumer-app configuration.
+example/android/local.properties

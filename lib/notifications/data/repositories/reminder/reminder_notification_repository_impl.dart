@@ -133,7 +133,7 @@ class ReminderNotificationRepositoryImpl
       }
 
       if (reminder.scheduledTime == null) {
-        return showInstant(reminder);
+        return await showInstant(reminder);
       }
 
       final scheduledTz = _toTimezone(

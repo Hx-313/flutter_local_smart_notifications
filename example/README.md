@@ -15,7 +15,7 @@ flutter run
 flutter test
 ```
 
-Complete the consumer Android/iOS setup in the package's [`docs/SETUP.md`](../docs/SETUP.md) before testing delivery. The example intentionally does not request notification permission at startup; use the permission controls in the runtime banner.
+Complete the consumer Android/iOS setup in the package's [`doc/SETUP.md`](../doc/SETUP.md) before testing delivery. The example intentionally does not request notification permission at startup; use the permission controls in the runtime banner.
 
 ## Coverage map
 
