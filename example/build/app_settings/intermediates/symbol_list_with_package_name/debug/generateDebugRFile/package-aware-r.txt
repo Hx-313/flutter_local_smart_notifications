@@ -1,1 +1,0 @@
-com.spencerccf.app_settings
