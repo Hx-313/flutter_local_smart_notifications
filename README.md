@@ -43,7 +43,7 @@ The package owns the difficult platform details so your app does not have to: **
 | **Scheduled notification** | One-time future alerts | `scheduleNotification` |
 | **Recurring schedule** | Daily, weekly, monthly, and yearly routines | `scheduleNotification` |
 | **Persistent reminder** | Alarm-like, high-priority user tasks | `showReminder`, `scheduleReminder` |
-| **Notification actions** | Done, Snooze, Review, Dismiss, Open | `NotificationAction` |
+| **Android reminder actions** | Done, Snooze, Review, Dismiss, Open | `ReminderNotification.actions` |
 | **Exact timing** | Precise, user-visible deadlines | `exactTiming: true` |
 | **Wall-clock timing** | Same local time after the user travels | `localWallClock` |
 | **Absolute timing** | The same global instant everywhere | `absoluteInstant` |
@@ -279,22 +279,22 @@ The `id` is the platform notification ID. Reusing an ID updates or replaces the 
 | `body` | Notification body. |
 | `channelId` | One of the channels declared in `NotificationConfig`. |
 | `data` | JSON-like routing and application data. |
-| `actions` | Buttons shown by the platform, where supported. |
-| `imageUrl` | Optional remote image URL, subject to platform and network support. |
 | `soundName` | Optional key registered in `soundAssets`. |
 | `silent` | Requests silent presentation. |
 
 ### Add notification actions
 
-Actions let a user respond without opening the app. Action taps are delivered through the same routing stream as notification taps.
+Android reminder actions let a user respond without opening the app. Action taps are delivered through the same routing stream as notification taps.
 
 ```dart
-const payload = NotificationPayload(
-  id: 2,
-  title: 'Review purchase',
-  body: 'A large purchase needs your attention.',
-  channelId: 'general',
-  data: {'route': '/expenses/2'},
+const reminder = ReminderNotification(
+  payload: NotificationPayload(
+    id: 2,
+    title: 'Review purchase',
+    body: 'A large purchase needs your attention.',
+    channelId: 'general',
+    data: {'route': '/expenses/2'},
+  ),
   actions: [
     NotificationAction(id: 'review', title: 'Review'),
     NotificationAction(
@@ -306,7 +306,7 @@ const payload = NotificationPayload(
   ],
 );
 
-await NotificationService.instance.showNotification(payload);
+await NotificationService.instance.showReminder(reminder);
 ```
 
 - `cancelNotification` controls whether the notification is removed after the action.
@@ -389,7 +389,6 @@ final result = await NotificationService.instance.scheduleReminder(
     ),
     scheduledTime: DateTime.now().add(const Duration(minutes: 2)),
     timeout: const Duration(minutes: 10),
-    loopSound: true,
     persistent: true,
     fullScreenIntent: false,
     exactTiming: true,
@@ -407,14 +406,13 @@ Use `showReminder` instead when `scheduledTime` is `null` and the reminder shoul
 | Field | Description |
 | --- | --- |
 | `timeout` | How long the reminder stays active before timing out. |
-| `loopSound` | Requests repeated sound, where supported. |
 | `persistent` | Requests an ongoing, harder-to-dismiss presentation. |
 | `fullScreenIntent` | Requests an alarm-like full-screen presentation. Use only when genuinely needed, and verify platform and store policy separately. |
 | `exactTiming` | Requests exact scheduling for a scheduled reminder. |
 | `actions` | Reminder-specific action buttons. |
 | `semantics` | Absolute-instant or local-wall-clock meaning. |
 
-`ReminderConfig` limits active reminders, sets the default timeout, enables persistence for reboot recovery, and controls the platform pending-notification budget.
+`ReminderConfig` limits active reminders and pending notifications, controls exact alarm delivery by default, and can enable reboot recovery.
 
 ### Handle taps and actions
 

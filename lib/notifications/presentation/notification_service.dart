@@ -181,7 +181,7 @@ class NotificationService with WidgetsBindingObserver {
         ProviderNotEnabledFailure('permission (no local features enabled)'),
       );
     }
-    final result = await _factory!.checkPermissionUseCase.call();
+    final result = await _factory!.permissionRepo.check();
     if (result.isSuccess) _publishPermissionStatus(result.valueOrNull!);
     return result;
   }
@@ -220,7 +220,7 @@ class NotificationService with WidgetsBindingObserver {
         return NotificationFailureResult(shouldRequest.failureOrNull!);
       }
       if (shouldRequest.valueOrNull!) {
-        statusResult = await _factory!.requestPermissionUseCase.call();
+        statusResult = await _factory!.permissionRepo.request();
         if (requestContext != null && !requestContext.mounted) {
           return _cancelledPermissionRequest();
         }
@@ -321,7 +321,7 @@ class NotificationService with WidgetsBindingObserver {
         ProviderNotEnabledFailure('permission (no local features enabled)'),
       );
     }
-    return _factory!.openSettingsUseCase.call();
+    return _factory!.permissionRepo.openSettings();
   }
 
   /// Displays [payload] immediately.
@@ -353,7 +353,7 @@ class NotificationService with WidgetsBindingObserver {
   Future<NotificationResult<void>> cancelAllScheduled() async {
     final failure = _precondition<void>(NotificationFeature.localScheduled);
     if (failure != null) return failure;
-    return _factory!.cancelAllScheduledUseCase.call();
+    return _factory!.scheduledRepo.cancelAll();
   }
 
   /// Returns identifiers for notifications that are currently scheduled.
@@ -362,7 +362,7 @@ class NotificationService with WidgetsBindingObserver {
       NotificationFeature.localScheduled,
     );
     if (failure != null) return failure;
-    return _factory!.getPendingUseCase.call();
+    return _factory!.scheduledRepo.getPendingIds();
   }
 
   /// Displays [reminder] immediately.

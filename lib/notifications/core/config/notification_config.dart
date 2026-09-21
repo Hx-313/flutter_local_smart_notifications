@@ -54,9 +54,6 @@ class NotificationConfig {
   /// Default Android notification color.
   final Color? androidDefaultColor;
 
-  /// iOS notification category identifiers supplied with this configuration.
-  final List<String> iosCategories;
-
   /// Maps sound names used by notifications to bundled asset paths.
   final Map<String, String> soundAssets;
 
@@ -78,7 +75,6 @@ class NotificationConfig {
     required this.channels,
     required this.androidDefaultIcon,
     this.androidDefaultColor,
-    this.iosCategories = const [],
     this.soundAssets = const {},
     this.permissionConfig = const PermissionConfig(),
     this.reminderConfig = const ReminderConfig(),

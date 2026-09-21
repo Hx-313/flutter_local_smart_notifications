@@ -1,3 +1,12 @@
+## 0.1.0
+
+### Changed
+
+- Add Dartdoc coverage across the public API.
+- Align the example app theme and Android notification color with the new logo.
+- Remove unused notification options and push-token failure types from the public API.
+- Remove unused permission UI and forwarding use cases.
+
 ## 0.0.1
 
 Initial release of `flutter_local_smart_notifications`.

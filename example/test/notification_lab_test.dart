@@ -37,15 +37,13 @@ void main() {
         'route': '/test',
         'nested': {'value': 42},
       },
-      actions: [NotificationAction(id: 'open', title: 'Open')],
     );
 
-    test('preserves rich payloads and actions', () {
+    test('preserves payload data', () {
       final copy = NotificationPayload.fromMap(payload.toMap());
 
       expect(copy.id, 7);
       expect(copy.data['nested'], {'value': 42});
-      expect(copy.actions.single.id, 'open');
     });
 
     test('covers every repeat interval and both schedule semantics', () {
@@ -111,7 +109,7 @@ void main() {
     await tester.tap(find.byKey(const Key('run-matrix')));
     await tester.pump();
 
-    expect(find.text('Payload + action round trip'), findsOneWidget);
+    expect(find.text('Payload data round trip'), findsOneWidget);
     expect(find.text('6/6 checks passed'), findsOneWidget);
   });
 

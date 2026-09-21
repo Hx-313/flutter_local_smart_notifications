@@ -1,5 +1,3 @@
-import 'notification_action.dart';
-
 /// Content and display options for a local notification.
 class NotificationPayload {
   /// Identifier used to update or cancel this notification.
@@ -17,12 +15,6 @@ class NotificationPayload {
   /// Application data delivered with the notification interaction.
   final Map<String, dynamic> data;
 
-  /// Actions offered alongside the notification.
-  final List<NotificationAction> actions;
-
-  /// Optional image URL associated with this payload.
-  final String? imageUrl;
-
   /// Optional key selecting a sound from the configured sound assets.
   final String? soundName;
 
@@ -36,8 +28,6 @@ class NotificationPayload {
     required this.body,
     required this.channelId,
     this.data = const {},
-    this.actions = const [],
-    this.imageUrl,
     this.soundName,
     this.silent = false,
   });
@@ -51,8 +41,6 @@ class NotificationPayload {
     String? body,
     String? channelId,
     Map<String, dynamic>? data,
-    List<NotificationAction>? actions,
-    String? imageUrl,
     String? soundName,
     bool? silent,
   }) => NotificationPayload(
@@ -61,21 +49,17 @@ class NotificationPayload {
     body: body ?? this.body,
     channelId: channelId ?? this.channelId,
     data: data ?? this.data,
-    actions: actions ?? this.actions,
-    imageUrl: imageUrl ?? this.imageUrl,
     soundName: soundName ?? this.soundName,
     silent: silent ?? this.silent,
   );
 
-  /// Serializes this payload and its actions to a map accepted by [fromMap].
+  /// Serializes this payload to a map accepted by [fromMap].
   Map<String, dynamic> toMap() => {
     'id': id,
     'title': title,
     'body': body,
     'channelId': channelId,
     'data': data,
-    'actions': actions.map((a) => a.toMap()).toList(),
-    'imageUrl': imageUrl,
     'soundName': soundName,
     'silent': silent,
   };
@@ -88,14 +72,6 @@ class NotificationPayload {
         body: map['body'] as String,
         channelId: map['channelId'] as String,
         data: Map<String, dynamic>.from(map['data'] as Map? ?? {}),
-        actions:
-            (map['actions'] as List?)
-                ?.map(
-                  (a) => NotificationAction.fromMap(a as Map<String, dynamic>),
-                )
-                .toList() ??
-            [],
-        imageUrl: map['imageUrl'] as String?,
         soundName: map['soundName'] as String?,
         silent: map['silent'] as bool? ?? false,
       );

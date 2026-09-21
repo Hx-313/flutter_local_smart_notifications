@@ -21,13 +21,8 @@ import '../../domain/repositories/i_notification_storage.dart';
 import '../../domain/repositories/i_permission_repository.dart';
 import '../../domain/repositories/i_reminder_notification_repository.dart';
 import '../../domain/repositories/i_scheduled_notification_repository.dart';
-import '../../domain/usecases/cancel_all_scheduled_usecase.dart';
 import '../../domain/usecases/cancel_notification_usecase.dart';
 import '../../domain/usecases/cancel_reminder_usecase.dart';
-import '../../domain/usecases/check_permission_usecase.dart';
-import '../../domain/usecases/get_pending_scheduled_usecase.dart';
-import '../../domain/usecases/open_notification_settings_usecase.dart';
-import '../../domain/usecases/request_permission_usecase.dart';
 import '../../domain/usecases/schedule_notification_usecase.dart';
 import '../../domain/usecases/schedule_reminder_usecase.dart';
 import '../../domain/usecases/show_instant_notification_usecase.dart';
@@ -215,10 +210,6 @@ class NotificationServiceFactory {
       ScheduleNotificationUseCase(scheduledRepo, config.channelIds);
   CancelNotificationUseCase get cancelUseCase =>
       CancelNotificationUseCase(localRepo, scheduledRepo);
-  CancelAllScheduledUseCase get cancelAllScheduledUseCase =>
-      CancelAllScheduledUseCase(scheduledRepo);
-  GetPendingScheduledUseCase get getPendingUseCase =>
-      GetPendingScheduledUseCase(scheduledRepo);
   ShowReminderUseCase get showReminderUseCase =>
       ShowReminderUseCase(reminderRepo, config.channelIds);
   ScheduleReminderUseCase get scheduleReminderUseCase =>
@@ -230,10 +221,4 @@ class NotificationServiceFactory {
       );
   CancelReminderUseCase get cancelReminderUseCase =>
       CancelReminderUseCase(reminderRepo, storage);
-  CheckPermissionUseCase get checkPermissionUseCase =>
-      CheckPermissionUseCase(permissionRepo);
-  RequestPermissionUseCase get requestPermissionUseCase =>
-      RequestPermissionUseCase(permissionRepo);
-  OpenNotificationSettingsUseCase get openSettingsUseCase =>
-      OpenNotificationSettingsUseCase(permissionRepo);
 }

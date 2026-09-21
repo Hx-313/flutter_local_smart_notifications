@@ -16,9 +16,6 @@ class ReminderNotification {
   /// Duration before the reminder times out.
   final Duration timeout;
 
-  /// Whether this reminder requests looping sound.
-  final bool loopSound;
-
   /// Whether the reminder remains visible until the user dismisses it.
   final bool persistent;
 
@@ -40,7 +37,6 @@ class ReminderNotification {
     required this.payload,
     this.scheduledTime,
     this.timeout = const Duration(minutes: 5),
-    this.loopSound = true,
     this.persistent = true,
     this.fullScreenIntent = false,
     this.exactTiming = false,
@@ -56,7 +52,6 @@ class ReminderNotification {
     'payload': payload.toMap(),
     'scheduledTime': scheduledTime?.toIso8601String(),
     'timeout': timeout.inMilliseconds,
-    'loopSound': loopSound,
     'persistent': persistent,
     'fullScreenIntent': fullScreenIntent,
     'exactTiming': exactTiming,
@@ -74,7 +69,6 @@ class ReminderNotification {
             ? DateTime.parse(map['scheduledTime'] as String)
             : null,
         timeout: Duration(milliseconds: map['timeout'] as int),
-        loopSound: map['loopSound'] as bool? ?? true,
         persistent: map['persistent'] as bool? ?? true,
         fullScreenIntent: map['fullScreenIntent'] as bool? ?? false,
         exactTiming: map['exactTiming'] as bool? ?? false,

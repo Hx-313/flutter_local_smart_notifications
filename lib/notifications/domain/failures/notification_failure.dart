@@ -126,19 +126,6 @@ class PastTimeFailure extends NotificationFailure {
     : super('Cannot schedule notification in the past');
 }
 
-// Token errors
-/// A requested token is unavailable.
-class TokenNotAvailableFailure extends NotificationFailure {
-  /// Creates a token-unavailable failure.
-  const TokenNotAvailableFailure() : super('Push token not available');
-}
-
-/// A token refresh operation failed.
-class TokenRefreshFailure extends NotificationFailure {
-  /// Creates a token-refresh failure with an optional underlying error.
-  const TokenRefreshFailure(super.message, [super.cause, super.stackTrace]);
-}
-
 // Storage errors
 /// Notification data could not be read from storage.
 class StorageReadFailure extends NotificationFailure {

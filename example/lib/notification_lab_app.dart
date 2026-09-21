@@ -5,6 +5,15 @@ import 'package:flutter_local_smart_notifications/flutter_local_smart_notificati
 
 import 'expense_notification_config.dart';
 
+const _brandLime = Color(0xFFD6FF3F);
+const _brandEmerald = Color(0xFF42D89B);
+const _brandIvory = Color(0xFFF2F5E8);
+const _brandInk = Color(0xFF07110E);
+const _brandSurface = Color(0xFF0B211A);
+const _brandRaisedSurface = Color(0xFF112A21);
+const _brandMutedText = Color(0xFFB5C8BA);
+const _statusWarning = Color(0xFFFFC857);
+
 class NotificationLabApp extends StatelessWidget {
   const NotificationLabApp({super.key, this.initialize = true});
 
@@ -23,38 +32,45 @@ class NotificationLabApp extends StatelessWidget {
   }
 
   ThemeData _buildTheme() {
-    const cyan = Color(0xFF00E5FF);
-    const green = Color(0xFF4CAF50);
     final scheme =
         ColorScheme.fromSeed(
-          seedColor: cyan,
+          seedColor: _brandLime,
           brightness: Brightness.dark,
         ).copyWith(
-          primary: cyan,
-          secondary: green,
-          surface: const Color(0xFF10161D),
+          primary: _brandLime,
+          onPrimary: _brandInk,
+          secondary: _brandEmerald,
+          onSecondary: _brandInk,
+          surface: _brandSurface,
+          onSurface: _brandIvory,
+          onSurfaceVariant: _brandMutedText,
         );
     return ThemeData(
       colorScheme: scheme,
-      scaffoldBackgroundColor: const Color(0xFF070A0E),
+      scaffoldBackgroundColor: _brandInk,
       useMaterial3: true,
       appBarTheme: const AppBarTheme(
-        backgroundColor: Color(0xFF070A0E),
-        foregroundColor: Colors.white,
+        backgroundColor: _brandInk,
+        foregroundColor: _brandIvory,
         centerTitle: false,
       ),
       cardTheme: CardThemeData(
-        color: const Color(0xFF10161D),
+        color: _brandSurface,
         margin: EdgeInsets.zero,
         shape: RoundedRectangleBorder(borderRadius: BorderRadius.circular(18)),
       ),
       inputDecorationTheme: InputDecorationTheme(
         filled: true,
-        fillColor: const Color(0xFF151D26),
+        fillColor: _brandRaisedSurface,
         border: OutlineInputBorder(
           borderRadius: BorderRadius.circular(12),
           borderSide: BorderSide.none,
         ),
+      ),
+      tabBarTheme: const TabBarThemeData(
+        indicatorColor: _brandLime,
+        labelColor: _brandLime,
+        unselectedLabelColor: _brandMutedText,
       ),
     );
   }
@@ -191,7 +207,7 @@ class _NotificationLabHomeState extends State<NotificationLabHome> {
                     Text('SMART NOTIFICATIONS', style: TextStyle(fontSize: 15)),
                     Text(
                       'Capability lab',
-                      style: TextStyle(fontSize: 12, color: Colors.white54),
+                      style: TextStyle(fontSize: 12, color: _brandMutedText),
                     ),
                   ],
                 ),
@@ -282,13 +298,13 @@ class _RuntimeBanner extends StatelessWidget {
 
   @override
   Widget build(BuildContext context) {
-    final color = ready ? Colors.greenAccent : Colors.orangeAccent;
+    final color = ready ? _brandEmerald : _statusWarning;
     final status = permissionStatus == null
         ? 'Permission not checked'
         : permissionStatus.runtimeType.toString();
     return Container(
       padding: const EdgeInsets.fromLTRB(16, 12, 16, 8),
-      color: const Color(0xFF0C1117),
+      color: _brandSurface,
       child: Column(
         children: [
           Row(
@@ -324,7 +340,7 @@ class _RuntimeBanner extends StatelessWidget {
                 key: const Key('runtime-message'),
                 maxLines: 2,
                 overflow: TextOverflow.ellipsis,
-                style: const TextStyle(color: Colors.white54, fontSize: 12),
+                style: const TextStyle(color: _brandMutedText, fontSize: 12),
               ),
             ),
           Wrap(
@@ -373,28 +389,19 @@ class _TestMatrixState extends State<_TestMatrix> {
     const payload = NotificationPayload(
       id: 100,
       title: 'Matrix payload',
-      body: 'Nested data and actions',
+      body: 'Nested application data',
       channelId: 'general',
       data: {
         'route': '/expenses',
         'filters': {'month': 9},
       },
-      actions: [
-        NotificationAction(id: 'open', title: 'Open'),
-        NotificationAction(
-          id: 'dismiss',
-          title: 'Dismiss',
-          cancelNotification: true,
-          openApp: false,
-        ),
-      ],
       silent: true,
     );
     final payloadCopy = NotificationPayload.fromMap(payload.toMap());
     check(
-      'Payload + action round trip',
-      payloadCopy.data['filters'] is Map && payloadCopy.actions.length == 2,
-      'nested data, silent flag, and two actions preserved',
+      'Payload data round trip',
+      payloadCopy.data['filters'] is Map && payloadCopy.silent,
+      'nested data and silent flag preserved',
     );
 
     final schedule = ScheduledNotification(
@@ -418,11 +425,18 @@ class _TestMatrixState extends State<_TestMatrix> {
       payload: payload,
       scheduledTime: DateTime(2026, 9, 22, 8),
       timeout: const Duration(minutes: 10),
-      loopSound: true,
       persistent: true,
       fullScreenIntent: true,
       exactTiming: true,
-      actions: payload.actions,
+      actions: const [
+        NotificationAction(id: 'open', title: 'Open'),
+        NotificationAction(
+          id: 'dismiss',
+          title: 'Dismiss',
+          cancelNotification: true,
+          openApp: false,
+        ),
+      ],
       semantics: NotificationScheduleSemantics.absoluteInstant,
     );
     final reminderCopy = ReminderNotification.fromMap(reminder.toMap());
@@ -522,9 +536,7 @@ class _InstantPage extends StatelessWidget {
     required String title,
     required String body,
     String channelId = 'general',
-    List<NotificationAction> actions = const [],
     bool silent = false,
-    String? imageUrl,
     String? soundName,
   }) => NotificationPayload(
     id: id,
@@ -532,9 +544,7 @@ class _InstantPage extends StatelessWidget {
     body: body,
     channelId: channelId,
     data: const {'route': '/expenses', 'source': 'notification_lab'},
-    actions: actions,
     silent: silent,
-    imageUrl: imageUrl,
     soundName: soundName,
   );
 
@@ -544,9 +554,9 @@ class _InstantPage extends StatelessWidget {
       children: [
         const _SectionIntro(
           eyebrow: 'LOCAL INSTANT',
-          title: 'Every payload shape',
+          title: 'Instant notifications',
           description:
-              'Fire immediately on a physical device. Tap notifications and actions to observe onRoutingEvent in the activity feed.',
+              'Fire immediately on a physical device. Tap notifications to observe onRoutingEvent in the activity feed.',
         ),
         _CaseCard(
           title: 'Basic alert',
@@ -565,46 +575,19 @@ class _InstantPage extends StatelessWidget {
           ),
         ),
         _CaseCard(
-          title: 'Action buttons',
-          description: 'Open and dismiss actions with independent behavior.',
-          tags: const ['actions', 'routing'],
-          buttonKey: 'instant-actions',
+          title: 'Silent presentation',
+          description: 'Exercises silent delivery for this notification.',
+          tags: const ['silent'],
+          buttonKey: 'instant-silent',
           onPressed: () => onRun(
-            'Action instant notification',
-            (service) => service.showNotification(
-              _payload(
-                id: 1102,
-                title: 'Review this purchase',
-                body: 'A large purchase needs your attention.',
-                actions: const [
-                  NotificationAction(id: 'review', title: 'Review'),
-                  NotificationAction(
-                    id: 'dismiss',
-                    title: 'Dismiss',
-                    openApp: false,
-                  ),
-                ],
-              ),
-            ),
-          ),
-        ),
-        _CaseCard(
-          title: 'Silent / sound / image variants',
-          description:
-              'Exercises silent delivery, a configured sound name, and an image URL.',
-          tags: const ['silent', 'soundName', 'imageUrl'],
-          buttonKey: 'instant-rich',
-          onPressed: () => onRun(
-            'Rich instant notification',
+            'Silent instant notification',
             (service) => service.showNotification(
               _payload(
                 id: 1103,
                 title: 'Monthly report ready',
                 body: 'Open the report to review your spending.',
                 channelId: 'reminders',
-                silent: false,
-                soundName: 'expense_ping',
-                imageUrl: 'https://picsum.photos/640/360',
+                silent: true,
               ),
             ),
           ),
@@ -864,7 +847,6 @@ class _RemindersPage extends StatelessWidget {
     ),
     scheduledTime: at,
     timeout: const Duration(minutes: 10),
-    loopSound: true,
     persistent: true,
     fullScreenIntent: fullScreen,
     exactTiming: exact,
@@ -883,12 +865,12 @@ class _RemindersPage extends StatelessWidget {
           eyebrow: 'PERSISTENT REMINDERS',
           title: 'High-priority alert behavior',
           description:
-              'Reminders persist through app restarts when configured, can be instant or scheduled, and expose explicit timeout, sound, action, and full-screen policy.',
+              'Reminders can be instant or scheduled, with explicit timeout, action, and full-screen policy.',
         ),
         _CaseCard(
           title: 'Instant persistent reminder',
           description:
-              'Immediate high-priority reminder with actions and looping sound policy.',
+              'Immediate high-priority reminder with Android action buttons.',
           tags: const ['instant', 'persistent', 'actions'],
           buttonKey: 'reminder-instant',
           onPressed: () => onRun(
@@ -938,7 +920,7 @@ class _RemindersPage extends StatelessWidget {
           title: 'Full-screen intent policy',
           description:
               'Exercises the explicit fullScreenIntent flag for alarm-like experiences.',
-          tags: const ['fullScreenIntent', 'actions'],
+          tags: const ['fullScreenIntent'],
           buttonKey: 'reminder-full-screen',
           onPressed: () => onRun(
             'Full-screen reminder',
@@ -1020,7 +1002,10 @@ class _SectionIntro extends StatelessWidget {
         const SizedBox(height: 6),
         Text(
           description,
-          style: const TextStyle(color: Colors.white60, height: 1.4),
+          style: TextStyle(
+            color: Theme.of(context).colorScheme.onSurfaceVariant,
+            height: 1.4,
+          ),
         ),
       ],
     );
@@ -1052,7 +1037,12 @@ class _CaseCard extends StatelessWidget {
           children: [
             Text(title, style: Theme.of(context).textTheme.titleMedium),
             const SizedBox(height: 6),
-            Text(description, style: const TextStyle(color: Colors.white60)),
+            Text(
+              description,
+              style: TextStyle(
+                color: Theme.of(context).colorScheme.onSurfaceVariant,
+              ),
+            ),
             const SizedBox(height: 12),
             Wrap(
               spacing: 6,
@@ -1113,7 +1103,10 @@ class _InfoCard extends StatelessWidget {
                   const SizedBox(height: 6),
                   Text(
                     body,
-                    style: const TextStyle(color: Colors.white60, height: 1.35),
+                    style: TextStyle(
+                      color: Theme.of(context).colorScheme.onSurfaceVariant,
+                      height: 1.35,
+                    ),
                   ),
                 ],
               ),
@@ -1144,7 +1137,8 @@ class _MatrixResultTile extends StatelessWidget {
 
   @override
   Widget build(BuildContext context) {
-    final color = result.passed ? Colors.greenAccent : Colors.redAccent;
+    final scheme = Theme.of(context).colorScheme;
+    final color = result.passed ? scheme.secondary : scheme.error;
     return Card(
       child: ListTile(
         leading: Icon(
@@ -1175,7 +1169,7 @@ class _ActivityBar extends StatelessWidget {
           padding: EdgeInsets.fromLTRB(16, 8, 16, 12),
           child: Text(
             'Activity will appear here after running a case.',
-            style: TextStyle(color: Colors.white38),
+            style: TextStyle(color: _brandMutedText),
           ),
         ),
       );

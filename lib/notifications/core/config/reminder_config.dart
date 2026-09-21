@@ -3,12 +3,6 @@ class ReminderConfig {
   /// Maximum number of active reminders maintained by the service.
   final int maxActiveReminders;
 
-  /// Timeout value configured as the default for reminders.
-  final Duration defaultTimeout;
-
-  /// Interval configured for reminder retry attempts.
-  final Duration retryInterval;
-
   /// Whether reminders should be restored after a device reboot.
   final bool persistAcrossReboot;
 
@@ -24,8 +18,6 @@ class ReminderConfig {
   /// Creates reminder limits and scheduling defaults.
   const ReminderConfig({
     this.maxActiveReminders = 50,
-    this.defaultTimeout = const Duration(minutes: 5),
-    this.retryInterval = const Duration(seconds: 30),
     this.persistAcrossReboot = true,
     this.useExactAlarm = false,
     this.maxPendingNotifications = 60,
