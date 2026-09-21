@@ -5,7 +5,6 @@ import 'package:flutter_local_smart_notifications/flutter_local_smart_notificati
 
 import 'expense_notification_config.dart';
 
-const _brandLime = Color(0xFFD6FF3F);
 const _brandEmerald = Color(0xFF42D89B);
 const _brandIvory = Color(0xFFF2F5E8);
 const _brandInk = Color(0xFF07110E);
@@ -34,10 +33,10 @@ class NotificationLabApp extends StatelessWidget {
   ThemeData _buildTheme() {
     final scheme =
         ColorScheme.fromSeed(
-          seedColor: _brandLime,
+          seedColor: _brandIvory,
           brightness: Brightness.dark,
         ).copyWith(
-          primary: _brandLime,
+          primary: _brandIvory,
           onPrimary: _brandInk,
           secondary: _brandEmerald,
           onSecondary: _brandInk,
@@ -68,8 +67,8 @@ class NotificationLabApp extends StatelessWidget {
         ),
       ),
       tabBarTheme: const TabBarThemeData(
-        indicatorColor: _brandLime,
-        labelColor: _brandLime,
+        indicatorColor: _brandIvory,
+        labelColor: _brandIvory,
         unselectedLabelColor: _brandMutedText,
       ),
     );
@@ -343,20 +342,32 @@ class _RuntimeBanner extends StatelessWidget {
                 style: const TextStyle(color: _brandMutedText, fontSize: 12),
               ),
             ),
-          Wrap(
-            spacing: 8,
+          Row(
             children: [
-              OutlinedButton.icon(
-                key: const Key('permission-button'),
-                onPressed: onRequestPermission,
-                icon: const Icon(Icons.notifications_outlined, size: 16),
-                label: const Text('Ask permission'),
+              Expanded(
+                child: OutlinedButton.icon(
+                  key: const Key('permission-button'),
+                  onPressed: onRequestPermission,
+                  icon: const Icon(Icons.notifications_outlined, size: 16),
+                  label: const Text(
+                    'Ask permission',
+                    maxLines: 1,
+                    overflow: TextOverflow.ellipsis,
+                  ),
+                ),
               ),
-              OutlinedButton.icon(
-                key: const Key('exact-permission-button'),
-                onPressed: onRequestExact,
-                icon: const Icon(Icons.alarm, size: 16),
-                label: const Text('Ask exact alarm'),
+              const SizedBox(width: 8),
+              Expanded(
+                child: OutlinedButton.icon(
+                  key: const Key('exact-permission-button'),
+                  onPressed: onRequestExact,
+                  icon: const Icon(Icons.alarm, size: 16),
+                  label: const Text(
+                    'Ask exact alarm',
+                    maxLines: 1,
+                    overflow: TextOverflow.ellipsis,
+                  ),
+                ),
               ),
             ],
           ),
