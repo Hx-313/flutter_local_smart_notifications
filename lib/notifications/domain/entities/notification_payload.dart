@@ -1,16 +1,35 @@
 import 'notification_action.dart';
 
+/// Content and display options for a local notification.
 class NotificationPayload {
+  /// Identifier used to update or cancel this notification.
   final int id;
+
+  /// Notification title.
   final String title;
+
+  /// Notification body text.
   final String body;
+
+  /// Identifier of the configured notification channel.
   final String channelId;
+
+  /// Application data delivered with the notification interaction.
   final Map<String, dynamic> data;
+
+  /// Actions offered alongside the notification.
   final List<NotificationAction> actions;
+
+  /// Optional image URL associated with this payload.
   final String? imageUrl;
+
+  /// Optional key selecting a sound from the configured sound assets.
   final String? soundName;
+
+  /// Whether the notification should be presented without sound.
   final bool silent;
 
+  /// Creates the content and display options for a local notification.
   const NotificationPayload({
     required this.id,
     required this.title,
@@ -23,6 +42,9 @@ class NotificationPayload {
     this.silent = false,
   });
 
+  /// Returns a copy with the supplied non-null fields replaced.
+  ///
+  /// Passing `null` keeps the current value, including nullable fields.
   NotificationPayload copyWith({
     int? id,
     String? title,
@@ -45,6 +67,7 @@ class NotificationPayload {
     silent: silent ?? this.silent,
   );
 
+  /// Serializes this payload and its actions to a map accepted by [fromMap].
   Map<String, dynamic> toMap() => {
     'id': id,
     'title': title,
@@ -57,6 +80,7 @@ class NotificationPayload {
     'silent': silent,
   };
 
+  /// Creates a payload from its serialized [map].
   factory NotificationPayload.fromMap(Map<String, dynamic> map) =>
       NotificationPayload(
         id: map['id'] as int,

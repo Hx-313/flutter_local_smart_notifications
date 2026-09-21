@@ -1,5 +1,6 @@
 # Build output (matches build/ at any depth, including example/build/)
 build/
+.gradle/
 
 # Dart / Flutter tooling
 .dart_tool/

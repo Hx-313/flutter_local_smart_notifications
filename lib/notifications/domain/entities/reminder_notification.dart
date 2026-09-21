@@ -5,17 +5,37 @@ import 'notification_payload.dart';
 import 'notification_action.dart';
 import 'scheduled_notification.dart';
 
+/// Describes an immediate or scheduled reminder notification.
 class ReminderNotification {
+  /// Content and display options shown for the reminder.
   final NotificationPayload payload;
+
+  /// Time to show the reminder, or `null` to show it immediately.
   final DateTime? scheduledTime; // null = instant
+
+  /// Duration before the reminder times out.
   final Duration timeout;
+
+  /// Whether this reminder requests looping sound.
   final bool loopSound;
+
+  /// Whether the reminder remains visible until the user dismisses it.
   final bool persistent;
+
+  /// Whether the reminder requests a full-screen intent on supported Android
+  /// devices.
   final bool fullScreenIntent;
+
+  /// Whether scheduled display requires exact alarm delivery.
   final bool exactTiming;
+
+  /// Actions offered alongside the reminder.
   final List<NotificationAction> actions;
+
+  /// How [scheduledTime] behaves when the device's timezone changes.
   final NotificationScheduleSemantics semantics;
 
+  /// Creates an immediate or scheduled reminder.
   const ReminderNotification({
     required this.payload,
     this.scheduledTime,
@@ -28,8 +48,10 @@ class ReminderNotification {
     this.semantics = NotificationScheduleSemantics.absoluteInstant,
   });
 
+  /// Whether this reminder has no scheduled time and should show immediately.
   bool get isInstant => scheduledTime == null;
 
+  /// Serializes this reminder to a map accepted by [fromMap].
   Map<String, dynamic> toMap() => {
     'payload': payload.toMap(),
     'scheduledTime': scheduledTime?.toIso8601String(),
@@ -42,6 +64,7 @@ class ReminderNotification {
     'semantics': semantics.name,
   };
 
+  /// Creates a reminder from its serialized [map].
   factory ReminderNotification.fromMap(Map<String, dynamic> map) =>
       ReminderNotification(
         payload: NotificationPayload.fromMap(

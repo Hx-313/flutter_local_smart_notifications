@@ -3,18 +3,57 @@
 
 import 'notification_payload.dart';
 
-enum RepeatInterval { none, daily, weekly, monthly, yearly }
+/// Recurrence interval for a scheduled notification.
+enum RepeatInterval {
+  /// Schedules the notification once.
+  none,
 
-enum NotificationScheduleSemantics { absoluteInstant, localWallClock }
+  /// Repeats the notification every day.
+  daily,
 
+  /// Repeats the notification every week.
+  weekly,
+
+  /// Repeats the notification every month.
+  monthly,
+
+  /// Repeats the notification every year.
+  yearly,
+}
+
+/// Defines how a scheduled time behaves when the device timezone changes.
+enum NotificationScheduleSemantics {
+  /// Preserves the same absolute moment in time.
+  absoluteInstant,
+
+  /// Preserves the same local clock time in the new timezone.
+  localWallClock,
+}
+
+/// Describes a notification scheduled for a future time.
 class ScheduledNotification {
+  /// Content and display options shown at the scheduled time.
   final NotificationPayload payload;
+
+  /// Date and time when the notification is scheduled to appear.
   final DateTime scheduledTime;
+
+  /// Recurrence interval, or [RepeatInterval.none] for a one-time schedule.
   final RepeatInterval repeatInterval;
+
+  /// Whether delivery may occur while the device is idle.
   final bool allowWhileIdle;
+
+  /// Whether scheduling requires exact alarm delivery.
+  ///
+  /// If exact delivery is unavailable, scheduling returns an
+  /// `ExactAlarmPermissionFailure`.
   final bool exactTiming;
+
+  /// How [scheduledTime] behaves when the device's timezone changes.
   final NotificationScheduleSemantics semantics;
 
+  /// Creates a scheduled notification.
   const ScheduledNotification({
     required this.payload,
     required this.scheduledTime,
@@ -24,6 +63,7 @@ class ScheduledNotification {
     this.semantics = NotificationScheduleSemantics.absoluteInstant,
   });
 
+  /// Serializes this schedule to a map accepted by [fromMap].
   Map<String, dynamic> toMap() => {
     'payload': payload.toMap(),
     'scheduledTime': scheduledTime.toIso8601String(),
@@ -33,6 +73,7 @@ class ScheduledNotification {
     'semantics': semantics.name,
   };
 
+  /// Creates a scheduled notification from its serialized [map].
   factory ScheduledNotification.fromMap(Map<String, dynamic> map) =>
       ScheduledNotification(
         payload: NotificationPayload.fromMap(

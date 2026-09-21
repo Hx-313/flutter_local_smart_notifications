@@ -13,12 +13,18 @@ import '../domain/failures/notification_failure.dart';
 import '../infrastructure/di/notification_service_factory.dart';
 import 'dialogs/default_permission_dialog.dart';
 
+/// Coordinates local notification permissions, display, and scheduling.
+///
+/// Create the active runtime with [create] or [initialize], then dispose it
+/// before initializing the service with a different configuration.
 class NotificationService with WidgetsBindingObserver {
   static NotificationService? _activeInstance;
   static NotificationConfig? _initializingConfig;
   static Future<NotificationResult<NotificationService>>? _initialization;
   static final NotificationService _uninitialized = NotificationService._();
 
+  /// Active service, or an uninitialized instance whose operations return
+  /// [NotInitializedFailure].
   static NotificationService get instance => _activeInstance ?? _uninitialized;
 
   NotificationServiceFactory? _factory;
@@ -30,10 +36,14 @@ class NotificationService with WidgetsBindingObserver {
   _permissionStatusController =
       StreamController<NotificationPermissionStatus>.broadcast();
 
+  /// Whether this service has completed initialization and is not disposed.
   bool get isInitialized => _initialized;
 
+  /// Stream of notification interactions routed by the active service.
   Stream<RoutingEvent> get onRoutingEvent =>
       _initialized ? _factory!.routingEvents.stream : const Stream.empty();
+
+  /// Stream of permission states published by permission checks and requests.
   Stream<NotificationPermissionStatus> get onPermissionStatusChanged =>
       _initialized ? _permissionStatusController.stream : const Stream.empty();
 
@@ -46,6 +56,10 @@ class NotificationService with WidgetsBindingObserver {
 
   NotificationService._();
 
+  /// Creates and initializes the single active notification runtime.
+  ///
+  /// Repeated calls with the same configuration return the active service. A
+  /// different configuration fails while another runtime is active.
   static Future<NotificationResult<NotificationService>> create(
     NotificationConfig config,
   ) {
@@ -81,6 +95,7 @@ class NotificationService with WidgetsBindingObserver {
     return future;
   }
 
+  /// Initializes the service; equivalent to [create].
   static Future<NotificationResult<NotificationService>> initialize(
     NotificationConfig config,
   ) => create(config);
@@ -141,6 +156,10 @@ class NotificationService with WidgetsBindingObserver {
     }
   }
 
+  /// Releases this runtime and its platform resources.
+  ///
+  /// Dispose the active service before creating one with a different
+  /// configuration.
   Future<void> dispose() async {
     if (_disposed) return;
     final wasInitialized = _initialized;
@@ -152,6 +171,7 @@ class NotificationService with WidgetsBindingObserver {
     if (identical(_activeInstance, this)) _activeInstance = null;
   }
 
+  /// Reads the current notification permission state.
   Future<NotificationResult<NotificationPermissionStatus>>
   checkPermission() async {
     final failure = _precondition<NotificationPermissionStatus>();
@@ -166,6 +186,11 @@ class NotificationService with WidgetsBindingObserver {
     return result;
   }
 
+  /// Requests notification permission and returns the resulting state.
+  ///
+  /// When [context] is supplied, it can be used to show the configured
+  /// explanation if permission must be changed in system settings. Set
+  /// [includeExactAlarm] to also check and request Android exact-alarm access.
   Future<NotificationResult<NotificationPermissionStatus>> requestPermission({
     BuildContext? context,
     bool includeExactAlarm = false,
@@ -287,6 +312,7 @@ class NotificationService with WidgetsBindingObserver {
     return NotificationSuccess(status);
   }
 
+  /// Opens this app's notification settings in the operating system.
   Future<NotificationResult<void>> openNotificationSettings() async {
     final failure = _precondition<void>();
     if (failure != null) return failure;
@@ -298,6 +324,7 @@ class NotificationService with WidgetsBindingObserver {
     return _factory!.openSettingsUseCase.call();
   }
 
+  /// Displays [payload] immediately.
   Future<NotificationResult<void>> showNotification(
     NotificationPayload payload,
   ) async {
@@ -306,6 +333,7 @@ class NotificationService with WidgetsBindingObserver {
     return _factory!.showInstantUseCase.call(payload);
   }
 
+  /// Schedules [notification] for its configured time and recurrence.
   Future<NotificationResult<void>> scheduleNotification(
     ScheduledNotification notification,
   ) async {
@@ -314,18 +342,21 @@ class NotificationService with WidgetsBindingObserver {
     return _factory!.scheduleUseCase.call(notification);
   }
 
+  /// Cancels a scheduled notification by its identifier.
   Future<NotificationResult<void>> cancelScheduled(int id) async {
     final failure = _precondition<void>(NotificationFeature.localScheduled);
     if (failure != null) return failure;
     return _factory!.scheduledRepo.cancel(id);
   }
 
+  /// Cancels all scheduled notifications.
   Future<NotificationResult<void>> cancelAllScheduled() async {
     final failure = _precondition<void>(NotificationFeature.localScheduled);
     if (failure != null) return failure;
     return _factory!.cancelAllScheduledUseCase.call();
   }
 
+  /// Returns identifiers for notifications that are currently scheduled.
   Future<NotificationResult<List<int>>> getPendingScheduled() async {
     final failure = _precondition<List<int>>(
       NotificationFeature.localScheduled,
@@ -334,6 +365,7 @@ class NotificationService with WidgetsBindingObserver {
     return _factory!.getPendingUseCase.call();
   }
 
+  /// Displays [reminder] immediately.
   Future<NotificationResult<void>> showReminder(
     ReminderNotification reminder,
   ) async {
@@ -342,6 +374,7 @@ class NotificationService with WidgetsBindingObserver {
     return _factory!.showReminderUseCase.call(reminder);
   }
 
+  /// Schedules [reminder] according to its time and reminder options.
   Future<NotificationResult<void>> scheduleReminder(
     ReminderNotification reminder,
   ) async {
@@ -350,18 +383,21 @@ class NotificationService with WidgetsBindingObserver {
     return _factory!.scheduleReminderUseCase.call(reminder);
   }
 
+  /// Cancels the reminder with identifier [id].
   Future<NotificationResult<void>> cancelReminder(int id) async {
     final failure = _precondition<void>(NotificationFeature.localReminder);
     if (failure != null) return failure;
     return _factory!.cancelReminderUseCase.call(id);
   }
 
+  /// Cancels all active reminders.
   Future<NotificationResult<void>> cancelAllReminders() async {
     final failure = _precondition<void>(NotificationFeature.localReminder);
     if (failure != null) return failure;
     return _factory!.reminderRepo.cancelAll();
   }
 
+  /// Cancels a local or scheduled notification with identifier [id].
   Future<NotificationResult<void>> cancelNotification(int id) async {
     final failure = _precondition<void>();
     if (failure != null) return failure;
@@ -375,6 +411,7 @@ class NotificationService with WidgetsBindingObserver {
     );
   }
 
+  /// Cancels all notifications managed by the enabled local features.
   Future<NotificationResult<void>> cancelAll() async {
     final failure = _precondition<void>();
     if (failure != null) return failure;
