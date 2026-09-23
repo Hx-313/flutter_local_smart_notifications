@@ -81,7 +81,7 @@ It does **not** fetch remote messages. Pair it with a separate push adapter if a
 
 ## Requirements
 
-- Flutter `3.38.1` or newer
+- Flutter `3.44.0` or newer
 - Dart `3.11.3` or newer
 - Android compile SDK 35 or newer (when building for Android)
 - Java 17 and core-library desugaring (Android)
@@ -93,7 +93,7 @@ Add the package to your app's `pubspec.yaml`:
 
 ```yaml
 dependencies:
-  flutter_local_smart_notifications: ^0.0.1
+  flutter_local_smart_notifications: ^0.1.0
 ```
 
 Then fetch dependencies:

@@ -6,6 +6,7 @@
 - Align the example app theme and Android notification color with the new logo.
 - Remove unused notification options and push-token failure types from the public API.
 - Remove unused permission UI and forwarding use cases.
+- Require Flutter `3.44.0` or newer and Dart `3.11.3` or newer.
 
 ## 0.0.1
 

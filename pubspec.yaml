@@ -9,7 +9,7 @@ issue_tracker: https://github.com/Hx-313/flutter_local_smart_notifications/issue
 
 environment:
   sdk: ^3.11.3
-  flutter: ">=3.38.1"
+  flutter: ">=3.44.0"
 
 dependencies:
   app_settings: ^9.0.0
