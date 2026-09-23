@@ -1,3 +1,9 @@
+## 0.1.1
+
+### Changed
+
+- Bump the pub.dev release version for the Flutter 3.44+ support update.
+
 ## 0.1.0
 
 ### Changed

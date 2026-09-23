@@ -93,7 +93,7 @@ Add the package to your app's `pubspec.yaml`:
 
 ```yaml
 dependencies:
-  flutter_local_smart_notifications: ^0.1.0
+  flutter_local_smart_notifications: ^0.1.1
 ```
 
 Then fetch dependencies:
