@@ -28,14 +28,11 @@ class ScheduledNotificationRepositoryImpl
   bool _timezoneInitialized = false;
 
   ScheduledNotificationRepositoryImpl({
-    required NotificationConfig config,
-    required INotificationLogger logger,
-    required FlutterLocalNotificationsPlugin plugin,
-    required IPermissionRepository permissions,
-  }) : _plugin = plugin,
-       _config = config,
-       _logger = logger,
-       _permissions = permissions;
+    required this._config,
+    required this._logger,
+    required this._plugin,
+    required this._permissions,
+  });
 
   @override
   Future<NotificationResult<void>> initialize() async {

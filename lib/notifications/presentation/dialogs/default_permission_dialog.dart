@@ -1,7 +1,7 @@
 // lib/services/notifications/presentation/dialogs/default_permission_dialog.dart
 // PRESENTATION | Default permission dialog implementation
 
-import 'package:flutter/material.dart';
+import 'package:material_ui/material_ui.dart';
 
 import 'i_permission_dialog.dart';
 

@@ -50,11 +50,11 @@ The boot receiver lets Android restore scheduled work after a restart. Dart cann
 
 ## Android Gradle
 
-`flutter_local_notifications` 22.x requires compile SDK 35 or newer and Java 17/desugaring configuration. In `android/app/build.gradle.kts`:
+`flutter_local_notifications` 23.x requires compile SDK 37 or newer and Java 17/desugaring configuration. In `android/app/build.gradle.kts`:
 
 ```kotlin
 android {
-    compileSdk = 35
+    compileSdk = 37
 
     defaultConfig {
         multiDexEnabled = true

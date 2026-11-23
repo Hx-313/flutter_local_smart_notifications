@@ -7,10 +7,9 @@ class NotificationLogger implements INotificationLogger {
   final String _tag;
 
   NotificationLogger({
-    LogLevel level = LogLevel.info,
-    String tag = 'NotificationService',
-  }) : _level = level,
-       _tag = tag;
+    this._level = LogLevel.info,
+    this._tag = 'NotificationService',
+  });
 
   bool _shouldLog(LogLevel messageLevel) {
     if (_level == LogLevel.none) return false;

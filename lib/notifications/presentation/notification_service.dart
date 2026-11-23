@@ -1,6 +1,6 @@
 import 'dart:async';
 
-import 'package:flutter/material.dart';
+import 'package:flutter/widgets.dart';
 import 'package:flutter_local_smart_notifications/notifications/domain/entities/notification_payload.dart';
 
 import '../core/config/notification_config.dart';

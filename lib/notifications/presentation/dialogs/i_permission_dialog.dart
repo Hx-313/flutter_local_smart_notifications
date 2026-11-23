@@ -1,7 +1,7 @@
 // lib/services/notifications/presentation/dialogs/i_permission_dialog.dart
 // PRESENTATION | Permission dialog interface (consumer can override)
 
-import 'package:flutter/material.dart';
+import 'package:flutter/widgets.dart';
 
 abstract interface class IPermissionDialog {
   Future<bool> show({

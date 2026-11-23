@@ -1,3 +1,14 @@
+## 0.2.0
+
+### Changed
+
+- Upgrade to Flutter `3.50.0` or newer and Dart `3.12.0` or newer.
+- Migrate to the decoupled standalone `material_ui` package (`^1.11.1`).
+- Decouple presentation interfaces (`IPermissionDialog`, `NotificationService`) from Material UI to use core style-neutral `package:flutter/widgets.dart`.
+- Upgrade `flutter_local_notifications` to `^23.0.3` with support for Android `compileSdk 37`, AGP 9.1.1, and live update notifications.
+- Upgrade dependencies: `device_info_plus: ^13.3.0`, `flutter_timezone: ^5.1.1`, `shared_preferences: ^2.5.6`, `timezone: ^0.11.2`, and `app_settings: ^9.0.1`.
+- Update setup documentation and example configuration for Android `compileSdk 37`.
+
 ## 0.1.1
 
 ### Changed

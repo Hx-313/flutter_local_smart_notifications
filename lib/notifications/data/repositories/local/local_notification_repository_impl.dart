@@ -22,14 +22,11 @@ class LocalNotificationRepositoryImpl implements ILocalNotificationRepository {
   final RoutingEventBus _routingEvents;
 
   LocalNotificationRepositoryImpl({
-    required NotificationConfig config,
-    required INotificationLogger logger,
-    required RoutingEventBus routingEvents,
-    required FlutterLocalNotificationsPlugin plugin,
-  }) : _plugin = plugin,
-       _config = config,
-       _logger = logger,
-       _routingEvents = routingEvents;
+    required this._config,
+    required this._logger,
+    required this._routingEvents,
+    required this._plugin,
+  });
 
   @override
   Future<NotificationResult<void>> initialize() async {

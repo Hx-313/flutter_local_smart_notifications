@@ -16,16 +16,12 @@ import '../../../domain/repositories/i_permission_repository.dart';
 
 class PermissionRepositoryImpl implements IPermissionRepository {
   PermissionRepositoryImpl({
-    required FlutterLocalNotificationsPlugin plugin,
-    required NotificationConfig config,
-    required INotificationLogger logger,
-    required INotificationStorage storage,
+    required this._plugin,
+    required this._config,
+    required this._logger,
+    required this._storage,
     DeviceInfoPlugin? deviceInfo,
-  }) : _plugin = plugin,
-       _config = config,
-       _logger = logger,
-       _storage = storage,
-       _deviceInfo = deviceInfo ?? DeviceInfoPlugin();
+  }) : _deviceInfo = deviceInfo ?? DeviceInfoPlugin();
 
   final FlutterLocalNotificationsPlugin _plugin;
   final NotificationConfig _config;

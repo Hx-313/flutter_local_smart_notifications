@@ -28,16 +28,12 @@ class ReminderNotificationRepositoryImpl
   final IPermissionRepository _permissions;
 
   ReminderNotificationRepositoryImpl({
-    required NotificationConfig config,
-    required INotificationStorage storage,
-    required INotificationLogger logger,
-    required FlutterLocalNotificationsPlugin plugin,
-    required IPermissionRepository permissions,
-  }) : _plugin = plugin,
-       _config = config,
-       _storage = storage,
-       _logger = logger,
-       _permissions = permissions;
+    required this._config,
+    required this._storage,
+    required this._logger,
+    required this._plugin,
+    required this._permissions,
+  });
 
   @override
   Future<NotificationResult<void>> initialize() async {

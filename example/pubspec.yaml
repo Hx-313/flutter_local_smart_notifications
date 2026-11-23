@@ -4,14 +4,15 @@ publish_to: 'none'
 version: 1.0.0+1
 
 environment:
-  sdk: ^3.11.3
-  flutter: ">=3.44.0"
+  sdk: ^3.12.0
+  flutter: ">=3.50.0"
 
 dependencies:
   flutter:
     sdk: flutter
   flutter_local_smart_notifications:
     path: ..
+  material_ui: ^1.11.1
 
 dev_dependencies:
   flutter_test:

@@ -81,9 +81,9 @@ It does **not** fetch remote messages. Pair it with a separate push adapter if a
 
 ## Requirements
 
-- Flutter `3.44.0` or newer
-- Dart `3.11.3` or newer
-- Android compile SDK 35 or newer (when building for Android)
+- Flutter `3.50.0` or newer
+- Dart `3.12.0` or newer
+- Android compile SDK 37 or newer (when building for Android)
 - Java 17 and core-library desugaring (Android)
 - A real device or emulator for delivery tests. Unit and widget tests can run without a notification-capable device.
 
@@ -93,7 +93,7 @@ Add the package to your app's `pubspec.yaml`:
 
 ```yaml
 dependencies:
-  flutter_local_smart_notifications: ^0.1.1
+  flutter_local_smart_notifications: ^0.2.0
 ```
 
 Then fetch dependencies:
@@ -110,7 +110,7 @@ See [doc/SETUP.md](doc/SETUP.md) for:
 
 - Android permissions and receivers
 - Exact-alarm access and Google Play policy considerations
-- Java 17, compile SDK 35, and desugaring
+- Java 17, compile SDK 37, and desugaring
 - Android launcher and notification resources, and custom sounds
 - iOS permission-handler configuration
 - iOS's pending-notification limit
